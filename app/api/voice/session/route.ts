@@ -33,27 +33,3 @@ export async function POST(request: Request) {
     )
   }
 }
-```
-
----
-
-## Step 4: Verify your final structure
-```
-app/
-  api/
-    voice/
-      session/
-        route.ts    ← New
-    coach/
-      route.ts      ← Existing
-    ...
-  coach/
-    page.tsx        ← Update this with new code
-  ...
-
-src/
-  components/
-    coach/
-      VoiceChat.tsx  ← New
-  lib/
-  types/
