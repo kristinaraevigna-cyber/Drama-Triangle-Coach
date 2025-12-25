@@ -4,7 +4,6 @@ export async function POST(request: Request) {
   try {
     const { language, systemPrompt } = await request.json()
 
-    // Get ephemeral token from OpenAI
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -34,3 +33,27 @@ export async function POST(request: Request) {
     )
   }
 }
+```
+
+---
+
+## Step 4: Verify your final structure
+```
+app/
+  api/
+    voice/
+      session/
+        route.ts    ← New
+    coach/
+      route.ts      ← Existing
+    ...
+  coach/
+    page.tsx        ← Update this with new code
+  ...
+
+src/
+  components/
+    coach/
+      VoiceChat.tsx  ← New
+  lib/
+  types/
