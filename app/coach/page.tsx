@@ -22,7 +22,8 @@ export default function CoachPage() {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const scrollToBottom = () => {
@@ -36,20 +37,23 @@ export default function CoachPage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognitionAPI) {
+        recognitionRef.current = new SpeechRecognitionAPI()
         recognitionRef.current.continuous = false
         recognitionRef.current.interimResults = false
         recognitionRef.current.lang = 'en-US'
 
-        recognitionRef.current.onresult = (event) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognitionRef.current.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript
           setVoiceStatus('processing')
           handleVoiceInput(transcript)
         }
 
-        recognitionRef.current.onerror = (event) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognitionRef.current.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error)
           setIsListening(false)
           setVoiceStatus('idle')
@@ -67,6 +71,7 @@ export default function CoachPage() {
       }
       window.speechSynthesis?.cancel()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const startListening = () => {
@@ -99,7 +104,6 @@ export default function CoachPage() {
       utterance.pitch = 1
       utterance.volume = 1
       
-      // Try to get a natural sounding voice
       const voices = window.speechSynthesis.getVoices()
       const preferredVoice = voices.find(v => 
         v.name.includes('Samantha') || 
@@ -119,7 +123,6 @@ export default function CoachPage() {
       utterance.onend = () => {
         setIsSpeaking(false)
         setVoiceStatus('idle')
-        // Auto-start listening again after coach finishes speaking
         if (voiceMode) {
           setTimeout(() => {
             startListening()
@@ -176,7 +179,6 @@ export default function CoachPage() {
 
       setMessages(prev => [...prev, assistantMessage])
 
-      // Speak the response in voice mode
       if (voiceMode) {
         speakResponse(data.message)
       }
@@ -368,11 +370,10 @@ export default function CoachPage() {
               textAlign: 'center',
               maxWidth: '35vw'
             }}>
-              ICF-style coaching to help you move from drama to compassion. Choose how you'd like to connect.
+              ICF-style coaching to help you move from drama to compassion. Choose how you would like to connect.
             </p>
 
             <div style={{ display: 'flex', gap: '2vw' }}>
-              {/* Voice Session Card */}
               <div
                 onClick={startVoiceSession}
                 style={{
@@ -382,16 +383,7 @@ export default function CoachPage() {
                   borderRadius: '1vw',
                   cursor: 'pointer',
                   border: '2px solid transparent',
-                  textAlign: 'center',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#3D5A4C'
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = 'transparent'
-                  e.currentTarget.style.transform = 'translateY(0)'
+                  textAlign: 'center'
                 }}
               >
                 <div style={{
@@ -419,7 +411,6 @@ export default function CoachPage() {
                 </p>
               </div>
 
-              {/* Text Session Card */}
               <div
                 onClick={startTextSession}
                 style={{
@@ -429,16 +420,7 @@ export default function CoachPage() {
                   borderRadius: '1vw',
                   cursor: 'pointer',
                   border: '2px solid #e8e8e8',
-                  textAlign: 'center',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#3D5A4C'
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#e8e8e8'
-                  e.currentTarget.style.transform = 'translateY(0)'
+                  textAlign: 'center'
                 }}
               >
                 <div style={{
@@ -480,7 +462,6 @@ export default function CoachPage() {
             padding: '4vw',
             position: 'relative'
           }}>
-            {/* End Session Button */}
             <button
               onClick={endVoiceMode}
               style={{
@@ -499,7 +480,6 @@ export default function CoachPage() {
               Switch to Text
             </button>
 
-            {/* Voice Visualization */}
             <div style={{
               width: '15vw',
               height: '15vw',
@@ -512,9 +492,7 @@ export default function CoachPage() {
               justifyContent: 'center',
               marginBottom: '3vw',
               transition: 'all 0.3s',
-              boxShadow: voiceStatus !== 'idle' ? '0 0 40px rgba(61, 90, 76, 0.3)' : 'none',
-              animation: voiceStatus === 'listening' ? 'pulse 1.5s infinite' : 
-                        voiceStatus === 'speaking' ? 'pulse 1s infinite' : 'none'
+              boxShadow: voiceStatus !== 'idle' ? '0 0 40px rgba(61, 90, 76, 0.3)' : 'none'
             }}>
               <span style={{ fontSize: '4vw' }}>
                 {voiceStatus === 'listening' ? '👂' : 
@@ -536,12 +514,11 @@ export default function CoachPage() {
             </h2>
 
             <p style={{ fontSize: '1vw', color: '#666', marginBottom: '2vw' }}>
-              {voiceStatus === 'listening' ? 'Share what\'s on your mind' : 
-               voiceStatus === 'speaking' ? 'Listen to your coach\'s response' : 
-               voiceStatus === 'processing' ? 'Processing your message' : 'Click the circle or button below'}
+              {voiceStatus === 'listening' ? 'Share what is on your mind' : 
+               voiceStatus === 'speaking' ? 'Listen to your coach response' : 
+               voiceStatus === 'processing' ? 'Processing your message' : 'Click the button below'}
             </p>
 
-            {/* Manual controls */}
             {voiceStatus === 'idle' && !isLoading && (
               <button
                 onClick={startListening}
@@ -600,7 +577,6 @@ export default function CoachPage() {
               </button>
             )}
 
-            {/* Last exchange preview (minimal) */}
             {messages.length > 0 && (
               <div style={{
                 position: 'absolute',
@@ -629,20 +605,12 @@ export default function CoachPage() {
                 ))}
               </div>
             )}
-
-            <style jsx>{`
-              @keyframes pulse {
-                0%, 100% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.05); opacity: 0.9; }
-              }
-            `}</style>
           </div>
         )}
 
         {/* Text Mode UI */}
         {sessionStarted && !voiceMode && (
           <>
-            {/* Header */}
             <div style={{
               padding: '1.5vw 2vw',
               borderBottom: '1px solid #e8e8e8',
@@ -676,11 +644,10 @@ export default function CoachPage() {
                   cursor: 'pointer'
                 }}
               >
-                🎙️ Switch to Voice
+                Switch to Voice
               </button>
             </div>
 
-            {/* Messages */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
@@ -728,7 +695,6 @@ export default function CoachPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div style={{
               padding: '1.5vw 2vw',
               borderTop: '1px solid #e8e8e8',
@@ -740,7 +706,7 @@ export default function CoachPage() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Share what's on your mind..."
+                  placeholder="Share what is on your mind..."
                   style={{
                     flex: 1,
                     padding: '1vw 1.5vw',
