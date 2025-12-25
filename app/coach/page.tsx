@@ -1,110 +1,29 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Message {
-  id: number
-  role: 'user' | 'coach'
+  id: string
+  role: 'user' | 'assistant'
   content: string
-  timestamp: Date
-  isSummary?: boolean
 }
-
-interface Action {
-  id: number
-  action: string
-  timeline: string
-  accountability: string
-  completed: boolean
-  createdAt: Date
-}
-
-const LANGUAGES = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵' },
-  { code: 'ko', name: '한국어', flag: '🇰🇷' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-]
-
-const VOICES = [
-  { id: 'default', name: 'Nova', description: 'Warm & friendly' },
-  { id: 'soft', name: 'Shimmer', description: 'Soft & gentle' },
-  { id: 'neutral', name: 'Alloy', description: 'Balanced' },
-  { id: 'male', name: 'Onyx', description: 'Deep & calm' },
-  { id: 'storyteller', name: 'Fable', description: 'Expressive' },
-]
-
-// End session trigger phrases
-const END_SESSION_TRIGGERS = [
-  'end session',
-  'end the session',
-  'finish session',
-  'finish the session',
-  'close session',
-  'close the session',
-  'that\'s all',
-  'that is all',
-  'i\'m done',
-  'im done',
-  'we\'re done',
-  'were done',
-  'goodbye',
-  'bye',
-  'thank you, that\'s all',
-  'thanks, that\'s all',
-  'end coaching',
-  'stop session',
-  'wrap up',
-  'let\'s wrap up',
-  'i want to end',
-  'i\'d like to end',
-]
 
 export default function CoachPage() {
-  const [userName] = useState('Friend')
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
-  const [selectedLanguage, setSelectedLanguage] = useState('en')
-  const [selectedVoice, setSelectedVoice] = useState('default')
-  const [autoSpeak, setAutoSpeak] = useState(true)
-  const [showLanguages, setShowLanguages] = useState(false)
-  const [showVoices, setShowVoices] = useState(false)
-  const [actions, setActions] = useState<Action[]>([])
-  const [showActions, setShowActions] = useState(true)
-  const [voiceMode, setVoiceMode] = useState(false)
-  const [sessionEnded, setSessionEnded] = useState(false)
-  const [showEndConfirm, setShowEndConfirm] = useState(false)
-  const [pendingActions, setPendingActions] = useState<Array<{action: string, timeline: string}>>([])
+  const [inputValue, setInputValue] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [sessionStarted, setSessionStarted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-
-  // Set initial greeting
-  useEffect(() => {
-    setMessages([
-      {
-        id: 1,
-        role: 'coach',
-        content: `Hello, ${userName}. What's on your mind today?`,
-        timestamp: new Date()
-      }
-    ])
-  }, [userName])
+  
+  // Voice mode states
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const synthRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -114,435 +33,243 @@ export default function CoachPage() {
     scrollToBottom()
   }, [messages])
 
-  // Initialize audio element
+  // Initialize speech recognition
   useEffect(() => {
-    audioRef.current = new Audio()
-    audioRef.current.onended = () => setIsSpeaking(false)
-    audioRef.current.onerror = () => {
-      setIsSpeaking(false)
-      setIsLoadingAudio(false)
-    }
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition()
+        recognitionRef.current.continuous = false
+        recognitionRef.current.interimResults = false
+        recognitionRef.current.lang = 'en-US'
+
+        recognitionRef.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript
+          setVoiceStatus('processing')
+          handleVoiceInput(transcript)
+        }
+
+        recognitionRef.current.onerror = (event) => {
+          console.error('Speech recognition error:', event.error)
+          setIsListening(false)
+          setVoiceStatus('idle')
+        }
+
+        recognitionRef.current.onend = () => {
+          setIsListening(false)
+        }
       }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort()
+      }
+      window.speechSynthesis?.cancel()
     }
   }, [])
 
-  // Check if message is an end session request
-  const isEndSessionRequest = (text: string): boolean => {
-    const lowerText = text.toLowerCase().trim()
-    return END_SESSION_TRIGGERS.some(trigger => 
-      lowerText.includes(trigger) || lowerText === trigger
-    )
-  }
-
-  // Extract actions from summary text
-  const extractActionsFromSummary = (text: string): Array<{action: string, timeline: string}> => {
-    const extractedActions: Array<{action: string, timeline: string}> = []
-    
-    // Look for action patterns in the summary
-    const actionPatterns = [
-      /🎯\s*\*?\*?Action:?\*?\*?\s*(.+?)(?=\n|$)/gi,
-      /\[ACTION:\s*([^\|]+)\|\s*TIMELINE:\s*([^\]]+)\]/gi,
-      /Action:\s*(.+?)(?=\n|$)/gi,
-      /Committed Action:\s*(.+?)(?=\n|$)/gi,
-    ]
-
-    for (const pattern of actionPatterns) {
-      let match
-      while ((match = pattern.exec(text)) !== null) {
-        const actionText = match[1]?.trim()
-        const timeline = match[2]?.trim() || 'This week'
-        if (actionText && !extractedActions.some(a => a.action === actionText)) {
-          extractedActions.push({ action: actionText, timeline })
-        }
+  const startListening = () => {
+    if (recognitionRef.current && !isListening && !isSpeaking) {
+      try {
+        window.speechSynthesis?.cancel()
+        recognitionRef.current.start()
+        setIsListening(true)
+        setVoiceStatus('listening')
+      } catch (error) {
+        console.error('Error starting recognition:', error)
       }
-    }
-
-    // Also look for bullet points under "Action" sections
-    const lines = text.split('\n')
-    let inActionSection = false
-    for (const line of lines) {
-      if (line.toLowerCase().includes('action') && (line.includes('🎯') || line.includes('**'))) {
-        inActionSection = true
-        continue
-      }
-      if (inActionSection && line.trim().startsWith('-')) {
-        const actionText = line.trim().substring(1).trim()
-        if (actionText && !extractedActions.some(a => a.action === actionText)) {
-          extractedActions.push({ action: actionText, timeline: 'This week' })
-        }
-      }
-      if (inActionSection && line.trim() === '') {
-        inActionSection = false
-      }
-    }
-
-    return extractedActions
-  }
-
-  // Add pending actions to the actions list
-  const addPendingActionsToList = () => {
-    if (pendingActions.length > 0) {
-      const newActions = pendingActions.map((a, i) => ({
-        id: Date.now() + i,
-        action: a.action,
-        timeline: a.timeline,
-        accountability: 'Self-tracked',
-        completed: false,
-        createdAt: new Date()
-      }))
-      setActions(prev => [...prev, ...newActions])
-      setPendingActions([])
-      setShowActions(true)
     }
   }
 
-  // Start recording voice
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        stream.getTracks().forEach(track => track.stop())
-        await transcribeAudio(audioBlob)
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-    } catch (error) {
-      console.error('Error starting recording:', error)
-      alert('Could not access microphone. Please check permissions.')
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+      setVoiceStatus('idle')
     }
   }
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-    }
-  }
-
-  const transcribeAudio = async (audioBlob: Blob) => {
-    setIsTranscribing(true)
-    
-    try {
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.webm')
-      formData.append('language', selectedLanguage)
-
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
+  const speakResponse = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 0.9
+      utterance.pitch = 1
+      utterance.volume = 1
+      
+      // Try to get a natural sounding voice
+      const voices = window.speechSynthesis.getVoices()
+      const preferredVoice = voices.find(v => 
+        v.name.includes('Samantha') || 
+        v.name.includes('Google') || 
+        v.name.includes('Natural') ||
+        v.lang === 'en-US'
+      )
+      if (preferredVoice) {
+        utterance.voice = preferredVoice
       }
 
-      if (data.text) {
-        if (voiceMode) {
-          await sendMessage(data.text)
-        } else {
-          setInput(prev => prev + data.text)
-        }
-      }
-    } catch (error) {
-      console.error('Transcription error:', error)
-      alert('Could not transcribe audio. Please try again.')
-    } finally {
-      setIsTranscribing(false)
-    }
-  }
-
-  const speakText = async (text: string) => {
-    if (isSpeaking || isLoadingAudio) {
-      stopSpeaking()
-      return
-    }
-
-    setIsLoadingAudio(true)
-
-    try {
-      const response = await fetch('/api/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice: selectedVoice,
-          speed: 1.0
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate speech')
-      }
-
-      const audioBlob = await response.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
-
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl
-        audioRef.current.play()
+      utterance.onstart = () => {
         setIsSpeaking(true)
+        setVoiceStatus('speaking')
       }
-    } catch (error) {
-      console.error('Speech error:', error)
-    } finally {
-      setIsLoadingAudio(false)
+
+      utterance.onend = () => {
+        setIsSpeaking(false)
+        setVoiceStatus('idle')
+        // Auto-start listening again after coach finishes speaking
+        if (voiceMode) {
+          setTimeout(() => {
+            startListening()
+          }, 500)
+        }
+      }
+
+      utterance.onerror = () => {
+        setIsSpeaking(false)
+        setVoiceStatus('idle')
+      }
+
+      synthRef.current = utterance
+      window.speechSynthesis.speak(utterance)
     }
   }
 
-  const stopSpeaking = () => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-    }
-    setIsSpeaking(false)
-    setIsLoadingAudio(false)
-  }
-
-  const sendMessage = async (messageText?: string) => {
-    const textToSend = messageText || input
-    if (!textToSend.trim() || isTyping || sessionEnded) return
-
-    // Check if this is an end session request
-    if (isEndSessionRequest(textToSend)) {
-      setShowEndConfirm(true)
+  const handleVoiceInput = async (transcript: string) => {
+    if (!transcript.trim()) {
+      setVoiceStatus('idle')
       return
     }
 
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now().toString(),
       role: 'user',
-      content: textToSend,
-      timestamp: new Date()
+      content: transcript
     }
 
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInput('')
-    setIsTyping(true)
+    setMessages(prev => [...prev, userMessage])
+    setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: updatedMessages.map(m => ({
+          messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content
-          })),
-          userName,
-          language: selectedLanguage
+          }))
         })
       })
 
+      if (!response.ok) throw new Error('Failed to get response')
+
       const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message
       }
 
-      const coachMessage: Message = {
-        id: updatedMessages.length + 1,
-        role: 'coach',
-        content: data.message,
-        timestamp: new Date()
+      setMessages(prev => [...prev, assistantMessage])
+
+      // Speak the response in voice mode
+      if (voiceMode) {
+        speakResponse(data.message)
       }
-
-      setMessages(prev => [...prev, coachMessage])
-
-      if (data.actions && data.actions.length > 0) {
-        const newActions = data.actions.map((a: {action: string, timeline: string, accountability: string}, i: number) => ({
-          id: Date.now() + i,
-          action: a.action,
-          timeline: a.timeline,
-          accountability: a.accountability,
-          completed: false,
-          createdAt: new Date()
-        }))
-        setActions(prev => [...prev, ...newActions])
-      }
-
-      if (autoSpeak || voiceMode) {
-        setTimeout(() => speakText(data.message), 300)
-      }
-
     } catch (error) {
       console.error('Error:', error)
-      const errorMessage: Message = {
-        id: updatedMessages.length + 1,
-        role: 'coach',
-        content: "I apologize, but I'm having trouble connecting right now. Please try again.",
-        timestamp: new Date()
+      const errorMessage = "I'm having trouble connecting. Let's try again."
+      if (voiceMode) {
+        speakResponse(errorMessage)
       }
-      setMessages(prev => [...prev, errorMessage])
     } finally {
-      setIsTyping(false)
+      setIsLoading(false)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+  const startSession = async () => {
+    setSessionStarted(true)
+    setIsLoading(true)
+
+    const openingMessage = "Hello! I'm here to support you today as your coach. What's on your mind? What would you like to explore in our session?"
+
+    const assistantMessage: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: openingMessage
+    }
+
+    setMessages([assistantMessage])
+    setIsLoading(false)
+
+    if (voiceMode) {
+      speakResponse(openingMessage)
     }
   }
 
-  const endSession = async () => {
-    setShowEndConfirm(false)
-    setIsTyping(true)
-    
+  const startVoiceSession = () => {
+    setVoiceMode(true)
+    startSession()
+  }
+
+  const startTextSession = () => {
+    setVoiceMode(false)
+    startSession()
+  }
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputValue
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInputValue('')
+    setIsLoading(true)
+
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messages.map(m => ({
+          messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content
-          })),
-          userName,
-          language: selectedLanguage,
-          requestSummary: true
+          }))
         })
       })
 
+      if (!response.ok) throw new Error('Failed to get response')
+
       const data = await response.json()
-
-      const summaryMessage: Message = {
-        id: messages.length + 1,
-        role: 'coach',
-        content: data.message,
-        timestamp: new Date(),
-        isSummary: true
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message
       }
 
-      setMessages(prev => [...prev, summaryMessage])
-
-      // Extract actions from summary
-      const extractedActions = extractActionsFromSummary(data.message)
-      if (extractedActions.length > 0) {
-        setPendingActions(extractedActions)
-      }
-
-      // Also add any explicitly formatted actions
-      if (data.actions && data.actions.length > 0) {
-        const newActions = data.actions.map((a: {action: string, timeline: string, accountability: string}, i: number) => ({
-          id: Date.now() + i,
-          action: a.action,
-          timeline: a.timeline,
-          accountability: a.accountability,
-          completed: false,
-          createdAt: new Date()
-        }))
-        setActions(prev => [...prev, ...newActions])
-      }
-
-      if (autoSpeak || voiceMode) {
-        setTimeout(() => speakText(data.message), 300)
-      }
-
-      setSessionEnded(true)
-
+      setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
       console.error('Error:', error)
     } finally {
-      setIsTyping(false)
+      setIsLoading(false)
     }
   }
 
-  const requestSessionSummary = async () => {
-    setIsTyping(true)
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          userName,
-          language: selectedLanguage,
-          requestSummary: true
-        })
-      })
-
-      const data = await response.json()
-
-      const summaryMessage: Message = {
-        id: messages.length + 1,
-        role: 'coach',
-        content: data.message,
-        timestamp: new Date(),
-        isSummary: true
-      }
-
-      setMessages(prev => [...prev, summaryMessage])
-
-      // Extract actions from summary
-      const extractedActions = extractActionsFromSummary(data.message)
-      if (extractedActions.length > 0) {
-        setPendingActions(extractedActions)
-      }
-
-      if (data.actions && data.actions.length > 0) {
-        const newActions = data.actions.map((a: {action: string, timeline: string, accountability: string}, i: number) => ({
-          id: Date.now() + i,
-          action: a.action,
-          timeline: a.timeline,
-          accountability: a.accountability,
-          completed: false,
-          createdAt: new Date()
-        }))
-        setActions(prev => [...prev, ...newActions])
-      }
-
-      if (autoSpeak || voiceMode) {
-        setTimeout(() => speakText(data.message), 300)
-      }
-
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setIsTyping(false)
-    }
-  }
-
-  const startNewSession = () => {
-    setMessages([
-      {
-        id: 1,
-        role: 'coach',
-        content: `Welcome back, ${userName}. What would you like to explore today?`,
-        timestamp: new Date()
-      }
-    ])
-    setSessionEnded(false)
-    setPendingActions([])
-  }
-
-  const toggleActionComplete = (id: number) => {
-    setActions(prev => prev.map(a => 
-      a.id === id ? { ...a, completed: !a.completed } : a
-    ))
+  const endVoiceMode = () => {
+    stopListening()
+    window.speechSynthesis?.cancel()
+    setVoiceMode(false)
+    setVoiceStatus('idle')
+    setIsSpeaking(false)
   }
 
   return (
@@ -551,80 +278,6 @@ export default function CoachPage() {
       backgroundColor: '#FAFAF8',
       display: 'flex'
     }}>
-      
-      {/* End Session Confirmation Modal */}
-      {showEndConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '1vw',
-            padding: '2vw',
-            maxWidth: '25vw',
-            textAlign: 'center',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <h3 style={{
-              fontSize: '1.2vw',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              fontFamily: 'Georgia, serif',
-              marginBottom: '1vw'
-            }}>
-              End Session?
-            </h3>
-            <p style={{
-              fontSize: '0.95vw',
-              color: '#666',
-              marginBottom: '1.5vw',
-              lineHeight: 1.5
-            }}>
-              I'll provide a summary of our conversation with key insights and any committed actions.
-            </p>
-            <div style={{ display: 'flex', gap: '1vw', justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowEndConfirm(false)}
-                style={{
-                  padding: '0.7vw 1.5vw',
-                  fontSize: '0.9vw',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.5vw',
-                  cursor: 'pointer'
-                }}
-              >
-                Continue Session
-              </button>
-              <button
-                onClick={endSession}
-                style={{
-                  padding: '0.7vw 1.5vw',
-                  fontSize: '0.9vw',
-                  backgroundColor: '#3D5A4C',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '0.5vw',
-                  cursor: 'pointer'
-                }}
-              >
-                End & Summarize
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Sidebar */}
       <div style={{
         width: '16vw',
@@ -635,13 +288,12 @@ export default function CoachPage() {
         flexDirection: 'column'
       }}>
         <div style={{ padding: '0 2vw', marginBottom: '4vw' }}>
-          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+          <div onClick={() => router.push('/dashboard')} style={{ cursor: 'pointer' }}>
             <h1 style={{
               fontSize: '1.3vw',
               fontWeight: 400,
               color: '#ffffff',
-              fontFamily: 'Georgia, serif',
-              letterSpacing: '0.02em'
+              fontFamily: 'Georgia, serif'
             }}>
               Drama Triangle
             </h1>
@@ -654,825 +306,470 @@ export default function CoachPage() {
             }}>
               Coach
             </p>
-          </Link>
+          </div>
         </div>
-
-        <div style={{
-          height: '1px',
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          margin: '0 2vw 2vw 2vw'
-        }} />
 
         <nav style={{ flex: 1, padding: '0 1vw' }}>
           {[
-            { name: 'Dashboard', href: '/dashboard', active: false },
+            { name: 'Dashboard', href: '/dashboard' },
             { name: 'Compassion Coach', href: '/coach', active: true },
-            { name: 'Learn', href: '/learn', active: false },
-            { name: 'Practice', href: '/practice', active: false },
-            { name: 'Journal', href: '/journal', active: false },
-            { name: 'Progress', href: '/progress', active: false },
+            { name: 'Mentor Coach', href: '/mentor' },
+            { name: 'Learn', href: '/learn' },
+            { name: 'Practice', href: '/practice' },
+            { name: 'Journal', href: '/journal' },
+            { name: 'Progress', href: '/progress' },
+            { name: 'Actions', href: '/actions' },
           ].map((item, i) => (
-            <Link 
-              key={i} 
-              href={item.href}
+            <div
+              key={i}
+              onClick={() => router.push(item.href)}
               style={{
-                display: 'block',
                 padding: '1vw 1.5vw',
                 marginBottom: '0.3vw',
                 borderRadius: '0.4vw',
                 backgroundColor: item.active ? 'rgba(255,255,255,0.12)' : 'transparent',
                 color: item.active ? '#ffffff' : 'rgba(255,255,255,0.6)',
-                textDecoration: 'none',
                 fontSize: '1vw',
-                fontWeight: item.active ? 500 : 400,
-                letterSpacing: '0.02em',
-                transition: 'all 0.2s ease'
+                cursor: 'pointer'
               }}
             >
               {item.name}
-            </Link>
+            </div>
           ))}
         </nav>
-
-        <div style={{ padding: '0 2vw' }}>
-          <div style={{
-            height: '1px',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            marginBottom: '2vw'
-          }} />
-          
-          <div style={{
-            padding: '1vw',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            borderRadius: '0.5vw',
-            marginBottom: '1.5vw'
-          }}>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75vw', marginBottom: '0.3vw' }}>
-              Coaching Standard
-            </p>
-            <p style={{ color: '#ffffff', fontSize: '0.85vw', fontWeight: 500 }}>
-              ICF ACC/PCC Level
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7vw', marginTop: '0.3vw' }}>
-              2025 Core Competencies
-            </p>
-          </div>
-
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8vw', marginBottom: '0.5vw' }}>
-            Session Status
-          </p>
-          <p style={{ color: sessionEnded ? '#fbbf24' : '#4ade80', fontSize: '0.9vw' }}>
-            {sessionEnded ? '✓ Completed' : '● Active'}
-          </p>
-        </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh'
-      }}>
-        
-        {/* Header */}
-        <div style={{
-          padding: '1.5vw 2.5vw',
-          borderBottom: '1px solid #e8e8e8',
-          backgroundColor: '#ffffff',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
+      {/* Main Content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Session Selection */}
+        {!sessionStarted && (
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4vw'
+          }}>
             <h1 style={{
-              fontSize: '1.5vw',
+              fontSize: '2.2vw',
               fontWeight: 500,
               color: '#1a1a1a',
               fontFamily: 'Georgia, serif',
-              margin: 0
+              marginBottom: '1vw',
+              textAlign: 'center'
             }}>
               Compassion Coach
             </h1>
-            <p style={{ fontSize: '0.9vw', color: '#666666', margin: 0, marginTop: '0.3vw' }}>
-              {voiceMode ? '🎙️ Voice conversation mode' : 'ICF-aligned coaching'}
+            <p style={{
+              fontSize: '1.1vw',
+              color: '#666',
+              marginBottom: '3vw',
+              textAlign: 'center',
+              maxWidth: '35vw'
+            }}>
+              ICF-style coaching to help you move from drama to compassion. Choose how you'd like to connect.
             </p>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8vw' }}>
-            {/* Voice Mode Toggle */}
-            <button
-              onClick={() => setVoiceMode(!voiceMode)}
-              disabled={sessionEnded}
-              style={{
-                padding: '0.6vw 1vw',
-                fontSize: '0.85vw',
-                backgroundColor: voiceMode ? '#3D5A4C' : '#f5f5f5',
-                color: voiceMode ? '#ffffff' : '#666666',
-                border: '1px solid',
-                borderColor: voiceMode ? '#3D5A4C' : '#e0e0e0',
-                borderRadius: '0.4vw',
-                cursor: sessionEnded ? 'not-allowed' : 'pointer',
-                fontWeight: voiceMode ? 500 : 400,
-                opacity: sessionEnded ? 0.5 : 1
-              }}
-            >
-              🎙️ Voice
-            </button>
-
-            {/* End Session Button */}
-            <button
-              onClick={() => setShowEndConfirm(true)}
-              disabled={isTyping || messages.length < 3 || sessionEnded}
-              style={{
-                padding: '0.6vw 1vw',
-                fontSize: '0.85vw',
-                backgroundColor: sessionEnded ? '#f5f5f5' : '#FFF8F0',
-                color: sessionEnded ? '#999' : '#8B4513',
-                border: '1px solid',
-                borderColor: sessionEnded ? '#e0e0e0' : '#8B4513',
-                borderRadius: '0.4vw',
-                cursor: sessionEnded || messages.length < 3 ? 'not-allowed' : 'pointer',
-                opacity: sessionEnded ? 0.5 : 1
-              }}
-            >
-              ✓ End Session
-            </button>
-
-            {/* Voice Selector */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => { setShowVoices(!showVoices); setShowLanguages(false) }}
+            <div style={{ display: 'flex', gap: '2vw' }}>
+              {/* Voice Session Card */}
+              <div
+                onClick={startVoiceSession}
                 style={{
-                  padding: '0.6vw 1vw',
-                  fontSize: '0.85vw',
-                  backgroundColor: '#f5f5f5',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.4vw',
+                  width: '18vw',
+                  padding: '2.5vw',
+                  backgroundColor: '#F0F7F4',
+                  borderRadius: '1vw',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4vw'
+                  border: '2px solid transparent',
+                  textAlign: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#3D5A4C'
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'transparent'
+                  e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                🔊 {VOICES.find(v => v.id === selectedVoice)?.name}
-              </button>
-              
-              {showVoices && (
                 <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '0.5vw',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.5vw',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  zIndex: 100,
-                  minWidth: '12vw'
-                }}>
-                  {VOICES.map((voice) => (
-                    <button
-                      key={voice.id}
-                      onClick={() => {
-                        setSelectedVoice(voice.id)
-                        setShowVoices(false)
-                      }}
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        padding: '0.7vw 1vw',
-                        fontSize: '0.85vw',
-                        backgroundColor: selectedVoice === voice.id ? '#F0F7F4' : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <span style={{ fontWeight: 500 }}>{voice.name}</span>
-                      <span style={{ color: '#666', marginLeft: '0.5vw', fontSize: '0.75vw' }}>
-                        {voice.description}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Language Selector */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => { setShowLanguages(!showLanguages); setShowVoices(false) }}
-                style={{
-                  padding: '0.6vw 1vw',
-                  fontSize: '0.85vw',
-                  backgroundColor: '#f5f5f5',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.4vw',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4vw'
-                }}
-              >
-                {LANGUAGES.find(l => l.code === selectedLanguage)?.flag}
-              </button>
-              
-              {showLanguages && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '0.5vw',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.5vw',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  zIndex: 100,
-                  maxHeight: '20vw',
-                  overflowY: 'auto'
-                }}>
-                  {LANGUAGES.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedLanguage(lang.code)
-                        setShowLanguages(false)
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5vw',
-                        width: '100%',
-                        padding: '0.7vw 1vw',
-                        fontSize: '0.85vw',
-                        backgroundColor: selectedLanguage === lang.code ? '#F0F7F4' : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      {lang.flag} {lang.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '2vw 2.5vw'
-        }}>
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              style={{
-                display: 'flex',
-                justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
-                marginBottom: '1.5vw'
-              }}
-            >
-              <div style={{
-                maxWidth: '60%',
-                display: 'flex',
-                gap: '1vw',
-                flexDirection: message.role === 'user' ? 'row-reverse' : 'row'
-              }}>
-                <div style={{
-                  width: '2.5vw',
-                  height: '2.5vw',
+                  width: '4vw',
+                  height: '4vw',
                   borderRadius: '50%',
-                  backgroundColor: message.role === 'coach' ? '#3D5A4C' : '#e8e8e8',
+                  backgroundColor: '#3D5A4C',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  margin: '0 auto 1.5vw auto'
                 }}>
-                  <span style={{
-                    fontSize: '1vw',
-                    color: message.role === 'coach' ? '#ffffff' : '#666666',
-                    fontFamily: 'Georgia, serif'
-                  }}>
-                    {message.role === 'coach' ? 'C' : userName.charAt(0)}
-                  </span>
+                  <span style={{ fontSize: '1.8vw' }}>🎙️</span>
                 </div>
-
-                <div>
-                  <div style={{
-                    padding: '1.2vw 1.5vw',
-                    borderRadius: '1vw',
-                    backgroundColor: message.role === 'coach' 
-                      ? message.isSummary ? '#F0F7F4' : '#ffffff' 
-                      : '#3D5A4C',
-                    color: message.role === 'coach' ? '#1a1a1a' : '#ffffff',
-                    border: message.role === 'coach' 
-                      ? message.isSummary ? '2px solid #3D5A4C' : '1px solid #e8e8e8'
-                      : 'none',
-                    fontSize: '1vw',
-                    lineHeight: 1.6,
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {message.isSummary && (
-                      <div style={{
-                        fontSize: '0.8vw',
-                        color: '#3D5A4C',
-                        fontWeight: 600,
-                        marginBottom: '0.5vw',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        📋 Session Summary
-                      </div>
-                    )}
-                    {message.content}
-                  </div>
-                  
-                  {/* Buttons for coach messages */}
-                  <div style={{ display: 'flex', gap: '0.5vw', marginTop: '0.5vw' }}>
-                    {message.role === 'coach' && (
-                      <button
-                        onClick={() => speakText(message.content)}
-                        disabled={isLoadingAudio}
-                        style={{
-                          padding: '0.3vw 0.8vw',
-                          fontSize: '0.75vw',
-                          color: isSpeaking ? '#3D5A4C' : '#666',
-                          backgroundColor: isSpeaking ? '#F0F7F4' : 'transparent',
-                          border: '1px solid',
-                          borderColor: isSpeaking ? '#3D5A4C' : '#e0e0e0',
-                          borderRadius: '0.3vw',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {isLoadingAudio ? '⏳' : isSpeaking ? '⏹ Stop' : '🔊 Listen'}
-                      </button>
-                    )}
-                    
-                    {/* Copy Actions button for summary messages */}
-                    {message.isSummary && pendingActions.length > 0 && (
-                      <button
-                        onClick={addPendingActionsToList}
-                        style={{
-                          padding: '0.3vw 0.8vw',
-                          fontSize: '0.75vw',
-                          color: '#3D5A4C',
-                          backgroundColor: '#F0F7F4',
-                          border: '1px solid #3D5A4C',
-                          borderRadius: '0.3vw',
-                          cursor: 'pointer',
-                          fontWeight: 500
-                        }}
-                      >
-                        ✓ Add {pendingActions.length} Action{pendingActions.length > 1 ? 's' : ''} to List
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <h3 style={{
+                  fontSize: '1.2vw',
+                  fontWeight: 500,
+                  color: '#1a1a1a',
+                  marginBottom: '0.5vw'
+                }}>
+                  Voice Conversation
+                </h3>
+                <p style={{ fontSize: '0.9vw', color: '#666', lineHeight: 1.5 }}>
+                  Speak directly with your coach. Like a real coaching call.
+                </p>
               </div>
-            </div>
-          ))}
 
-          {isTyping && (
-            <div style={{
-              display: 'flex',
-              gap: '1vw',
-              marginBottom: '1.5vw'
-            }}>
-              <div style={{
-                width: '2.5vw',
-                height: '2.5vw',
-                borderRadius: '50%',
-                backgroundColor: '#3D5A4C',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <span style={{ fontSize: '1vw', color: '#ffffff', fontFamily: 'Georgia, serif' }}>C</span>
-              </div>
-              <div style={{
-                padding: '1.2vw 1.5vw',
-                borderRadius: '1vw',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e8e8e8'
-              }}>
-                <div style={{ display: 'flex', gap: '0.3vw' }}>
-                  <div style={{ width: '0.5vw', height: '0.5vw', borderRadius: '50%', backgroundColor: '#999', animation: 'pulse 1.5s infinite' }} />
-                  <div style={{ width: '0.5vw', height: '0.5vw', borderRadius: '50%', backgroundColor: '#999', animation: 'pulse 1.5s infinite 0.3s' }} />
-                  <div style={{ width: '0.5vw', height: '0.5vw', borderRadius: '50%', backgroundColor: '#999', animation: 'pulse 1.5s infinite 0.6s' }} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div style={{
-          padding: '1.5vw 2.5vw',
-          borderTop: '1px solid #e8e8e8',
-          backgroundColor: '#ffffff'
-        }}>
-          {sessionEnded ? (
-            // Session Ended State
-            <div style={{ textAlign: 'center' }}>
-              <p style={{
-                fontSize: '1vw',
-                color: '#666',
-                marginBottom: '1vw'
-              }}>
-                Session complete. Your actions have been saved.
-              </p>
-              <button
-                onClick={startNewSession}
+              {/* Text Session Card */}
+              <div
+                onClick={startTextSession}
                 style={{
-                  padding: '0.8vw 2vw',
-                  fontSize: '1vw',
+                  width: '18vw',
+                  padding: '2.5vw',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '1vw',
+                  cursor: 'pointer',
+                  border: '2px solid #e8e8e8',
+                  textAlign: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#3D5A4C'
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#e8e8e8'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                <div style={{
+                  width: '4vw',
+                  height: '4vw',
+                  borderRadius: '50%',
+                  backgroundColor: '#e8e8e8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1.5vw auto'
+                }}>
+                  <span style={{ fontSize: '1.8vw' }}>💬</span>
+                </div>
+                <h3 style={{
+                  fontSize: '1.2vw',
+                  fontWeight: 500,
+                  color: '#1a1a1a',
+                  marginBottom: '0.5vw'
+                }}>
+                  Text Chat
+                </h3>
+                <p style={{ fontSize: '0.9vw', color: '#666', lineHeight: 1.5 }}>
+                  Type your thoughts. Take your time to reflect.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Voice Mode UI */}
+        {sessionStarted && voiceMode && (
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4vw',
+            position: 'relative'
+          }}>
+            {/* End Session Button */}
+            <button
+              onClick={endVoiceMode}
+              style={{
+                position: 'absolute',
+                top: '2vw',
+                right: '2vw',
+                padding: '0.5vw 1vw',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e0e0e0',
+                borderRadius: '0.4vw',
+                fontSize: '0.9vw',
+                color: '#666',
+                cursor: 'pointer'
+              }}
+            >
+              Switch to Text
+            </button>
+
+            {/* Voice Visualization */}
+            <div style={{
+              width: '15vw',
+              height: '15vw',
+              borderRadius: '50%',
+              backgroundColor: voiceStatus === 'listening' ? '#3D5A4C' : 
+                             voiceStatus === 'speaking' ? '#4B0082' : 
+                             voiceStatus === 'processing' ? '#8B4513' : '#e8e8e8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '3vw',
+              transition: 'all 0.3s',
+              boxShadow: voiceStatus !== 'idle' ? '0 0 40px rgba(61, 90, 76, 0.3)' : 'none',
+              animation: voiceStatus === 'listening' ? 'pulse 1.5s infinite' : 
+                        voiceStatus === 'speaking' ? 'pulse 1s infinite' : 'none'
+            }}>
+              <span style={{ fontSize: '4vw' }}>
+                {voiceStatus === 'listening' ? '👂' : 
+                 voiceStatus === 'speaking' ? '🗣️' : 
+                 voiceStatus === 'processing' ? '💭' : '🎙️'}
+              </span>
+            </div>
+
+            <h2 style={{
+              fontSize: '1.5vw',
+              fontWeight: 500,
+              color: '#1a1a1a',
+              marginBottom: '0.5vw',
+              fontFamily: 'Georgia, serif'
+            }}>
+              {voiceStatus === 'listening' ? "I'm listening..." : 
+               voiceStatus === 'speaking' ? 'Coach is speaking...' : 
+               voiceStatus === 'processing' ? 'Thinking...' : 'Tap to speak'}
+            </h2>
+
+            <p style={{ fontSize: '1vw', color: '#666', marginBottom: '2vw' }}>
+              {voiceStatus === 'listening' ? 'Share what\'s on your mind' : 
+               voiceStatus === 'speaking' ? 'Listen to your coach\'s response' : 
+               voiceStatus === 'processing' ? 'Processing your message' : 'Click the circle or button below'}
+            </p>
+
+            {/* Manual controls */}
+            {voiceStatus === 'idle' && !isLoading && (
+              <button
+                onClick={startListening}
+                style={{
+                  padding: '1vw 2.5vw',
                   backgroundColor: '#3D5A4C',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '0.5vw',
+                  fontSize: '1vw',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Start Speaking
+              </button>
+            )}
+
+            {voiceStatus === 'listening' && (
+              <button
+                onClick={stopListening}
+                style={{
+                  padding: '1vw 2.5vw',
+                  backgroundColor: '#A85454',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.5vw',
+                  fontSize: '1vw',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Stop Listening
+              </button>
+            )}
+
+            {voiceStatus === 'speaking' && (
+              <button
+                onClick={() => {
+                  window.speechSynthesis?.cancel()
+                  setIsSpeaking(false)
+                  setVoiceStatus('idle')
+                }}
+                style={{
+                  padding: '1vw 2.5vw',
+                  backgroundColor: '#666',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.5vw',
+                  fontSize: '1vw',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Skip Response
+              </button>
+            )}
+
+            {/* Last exchange preview (minimal) */}
+            {messages.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: '2vw',
+                left: '2vw',
+                right: '2vw',
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                borderRadius: '0.8vw',
+                padding: '1.5vw',
+                maxHeight: '15vh',
+                overflowY: 'auto'
+              }}>
+                <p style={{ fontSize: '0.8vw', color: '#999', marginBottom: '0.5vw' }}>
+                  Last exchange:
+                </p>
+                {messages.slice(-2).map((msg) => (
+                  <p key={msg.id} style={{
+                    fontSize: '0.9vw',
+                    color: msg.role === 'assistant' ? '#3D5A4C' : '#333',
+                    marginBottom: '0.3vw',
+                    fontStyle: msg.role === 'assistant' ? 'italic' : 'normal'
+                  }}>
+                    <strong>{msg.role === 'assistant' ? 'Coach: ' : 'You: '}</strong>
+                    {msg.content.length > 150 ? msg.content.substring(0, 150) + '...' : msg.content}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            <style jsx>{`
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.05); opacity: 0.9; }
+              }
+            `}</style>
+          </div>
+        )}
+
+        {/* Text Mode UI */}
+        {sessionStarted && !voiceMode && (
+          <>
+            {/* Header */}
+            <div style={{
+              padding: '1.5vw 2vw',
+              borderBottom: '1px solid #e8e8e8',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h1 style={{
+                  fontSize: '1.3vw',
+                  fontWeight: 500,
+                  color: '#1a1a1a',
+                  margin: 0
+                }}>
+                  Compassion Coach
+                </h1>
+                <p style={{ fontSize: '0.85vw', color: '#666', margin: 0 }}>
+                  ICF-style coaching session
+                </p>
+              </div>
+              <button
+                onClick={() => setVoiceMode(true)}
+                style={{
+                  padding: '0.5vw 1vw',
+                  backgroundColor: '#F0F7F4',
+                  border: '1px solid #3D5A4C',
+                  borderRadius: '0.4vw',
+                  fontSize: '0.9vw',
+                  color: '#3D5A4C',
                   cursor: 'pointer'
                 }}
               >
-                Start New Session
+                🎙️ Switch to Voice
               </button>
             </div>
-          ) : voiceMode ? (
-            // Voice Mode Input
-            <div style={{ textAlign: 'center' }}>
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing || isTyping}
-                style={{
-                  width: '5vw',
-                  height: '5vw',
-                  borderRadius: '50%',
-                  backgroundColor: isRecording ? '#ef4444' : '#3D5A4C',
-                  color: '#ffffff',
-                  border: 'none',
-                  cursor: isTranscribing || isTyping ? 'not-allowed' : 'pointer',
-                  fontSize: '2vw',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto',
-                  transition: 'all 0.2s',
-                  boxShadow: isRecording ? '0 0 0 0.5vw rgba(239,68,68,0.3)' : 'none'
-                }}
-              >
-                {isTranscribing ? '⏳' : isRecording ? '⏹' : '🎤'}
-              </button>
-              <p style={{
-                fontSize: '0.9vw',
-                color: isRecording ? '#ef4444' : '#666',
-                marginTop: '1vw'
-              }}>
-                {isTranscribing ? 'Transcribing...' : isRecording ? 'Listening... tap to stop' : 'Tap to speak'}
-              </p>
-              <p style={{
-                fontSize: '0.75vw',
-                color: '#999',
-                marginTop: '0.5vw'
-              }}>
-                Say "end session" or "that's all" when you're done
-              </p>
-            </div>
-          ) : (
-            // Text Mode Input
-            <>
-              <div style={{
-                display: 'flex',
-                gap: '1vw',
-                alignItems: 'flex-end'
-              }}>
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isTranscribing}
+
+            {/* Messages */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '2vw'
+            }}>
+              {messages.map((message) => (
+                <div
+                  key={message.id}
                   style={{
-                    padding: '1vw',
-                    fontSize: '1.2vw',
-                    backgroundColor: isRecording ? '#ef4444' : '#f5f5f5',
-                    color: isRecording ? '#ffffff' : '#666666',
-                    border: 'none',
-                    borderRadius: '0.8vw',
-                    cursor: 'pointer'
+                    display: 'flex',
+                    justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                    marginBottom: '1.5vw'
                   }}
                 >
-                  {isTranscribing ? '⏳' : isRecording ? '⏹' : '🎤'}
-                </button>
+                  <div style={{
+                    maxWidth: '60%',
+                    padding: '1.2vw 1.5vw',
+                    borderRadius: '1vw',
+                    backgroundColor: message.role === 'user' ? '#3D5A4C' : '#ffffff',
+                    color: message.role === 'user' ? '#ffffff' : '#333',
+                    border: message.role === 'assistant' ? '1px solid #e8e8e8' : 'none',
+                    fontSize: '1vw',
+                    lineHeight: 1.6
+                  }}>
+                    {message.content}
+                  </div>
+                </div>
+              ))}
 
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder={isRecording ? 'Listening...' : 'Share what\'s on your mind...'}
-                  rows={2}
+              {isLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '1.5vw' }}>
+                  <div style={{
+                    padding: '1.2vw 1.5vw',
+                    borderRadius: '1vw',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e8e8e8',
+                    fontSize: '1vw',
+                    color: '#666'
+                  }}>
+                    Thinking...
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div style={{
+              padding: '1.5vw 2vw',
+              borderTop: '1px solid #e8e8e8',
+              backgroundColor: '#ffffff'
+            }}>
+              <div style={{ display: 'flex', gap: '1vw' }}>
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Share what's on your mind..."
                   style={{
                     flex: 1,
-                    padding: '1vw 1.2vw',
+                    padding: '1vw 1.5vw',
                     fontSize: '1vw',
-                    border: '1px solid',
-                    borderColor: isRecording ? '#3D5A4C' : '#e0e0e0',
-                    borderRadius: '0.8vw',
-                    backgroundColor: isRecording ? '#F0F7F4' : '#FAFAF8',
-                    outline: 'none',
-                    resize: 'none',
-                    fontFamily: 'inherit',
-                    lineHeight: 1.5
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '0.5vw',
+                    outline: 'none'
                   }}
                 />
                 <button
-                  onClick={() => sendMessage()}
-                  disabled={!input.trim() || isTyping}
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || isLoading}
                   style={{
                     padding: '1vw 2vw',
-                    fontSize: '1vw',
-                    fontWeight: 500,
+                    backgroundColor: inputValue.trim() && !isLoading ? '#3D5A4C' : '#ccc',
                     color: '#ffffff',
-                    backgroundColor: input.trim() && !isTyping ? '#3D5A4C' : '#ccc',
                     border: 'none',
-                    borderRadius: '0.8vw',
-                    cursor: input.trim() && !isTyping ? 'pointer' : 'not-allowed'
+                    borderRadius: '0.5vw',
+                    fontSize: '1vw',
+                    cursor: inputValue.trim() && !isLoading ? 'pointer' : 'not-allowed'
                   }}
                 >
                   Send
                 </button>
               </div>
-              <p style={{
-                fontSize: '0.75vw',
-                color: '#999',
-                marginTop: '0.8vw',
-                textAlign: 'center'
-              }}>
-                Type "end session" when you're ready to wrap up
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Right Panel - Actions & Reference */}
-      <div style={{
-        width: '18vw',
-        minHeight: '100vh',
-        backgroundColor: '#ffffff',
-        borderLeft: '1px solid #e8e8e8',
-        padding: '2vw',
-        overflowY: 'auto'
-      }}>
-        <div style={{
-          display: 'flex',
-          gap: '0.5vw',
-          marginBottom: '1.5vw'
-        }}>
-          <button
-            onClick={() => setShowActions(true)}
-            style={{
-              flex: 1,
-              padding: '0.6vw',
-              fontSize: '0.85vw',
-              backgroundColor: showActions ? '#3D5A4C' : '#f5f5f5',
-              color: showActions ? '#ffffff' : '#666',
-              border: 'none',
-              borderRadius: '0.4vw',
-              cursor: 'pointer'
-            }}
-          >
-            Actions ({actions.length})
-          </button>
-          <button
-            onClick={() => setShowActions(false)}
-            style={{
-              flex: 1,
-              padding: '0.6vw',
-              fontSize: '0.85vw',
-              backgroundColor: !showActions ? '#3D5A4C' : '#f5f5f5',
-              color: !showActions ? '#ffffff' : '#666',
-              border: 'none',
-              borderRadius: '0.4vw',
-              cursor: 'pointer'
-            }}
-          >
-            Reference
-          </button>
-        </div>
-
-        {showActions ? (
-          <>
-            <h2 style={{
-              fontSize: '1.1vw',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              fontFamily: 'Georgia, serif',
-              marginBottom: '1vw'
-            }}>
-              Committed Actions
-            </h2>
-
-            {/* Pending Actions Banner */}
-            {pendingActions.length > 0 && (
-              <div style={{
-                padding: '1vw',
-                backgroundColor: '#FFF8F0',
-                border: '1px solid #fbbf24',
-                borderRadius: '0.5vw',
-                marginBottom: '1vw'
-              }}>
-                <p style={{ fontSize: '0.85vw', color: '#8B4513', margin: 0, marginBottom: '0.5vw' }}>
-                  {pendingActions.length} new action{pendingActions.length > 1 ? 's' : ''} from summary
-                </p>
-                <button
-                  onClick={addPendingActionsToList}
-                  style={{
-                    padding: '0.4vw 0.8vw',
-                    fontSize: '0.8vw',
-                    backgroundColor: '#3D5A4C',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '0.3vw',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✓ Add to List
-                </button>
-              </div>
-            )}
-
-            {actions.length === 0 ? (
-              <div style={{
-                padding: '2vw',
-                backgroundColor: '#f9f9f9',
-                borderRadius: '0.5vw',
-                textAlign: 'center'
-              }}>
-                <p style={{ fontSize: '0.9vw', color: '#666', margin: 0 }}>
-                  Actions will appear here after your session summary.
-                </p>
-              </div>
-            ) : (
-              <div>
-                {actions.map((action) => (
-                  <div
-                    key={action.id}
-                    style={{
-                      padding: '1vw',
-                      backgroundColor: action.completed ? '#F0F7F4' : '#ffffff',
-                      border: '1px solid #e8e8e8',
-                      borderRadius: '0.5vw',
-                      marginBottom: '0.8vw'
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.8vw'
-                    }}>
-                      <button
-                        onClick={() => toggleActionComplete(action.id)}
-                        style={{
-                          width: '1.2vw',
-                          height: '1.2vw',
-                          borderRadius: '50%',
-                          border: '2px solid',
-                          borderColor: action.completed ? '#3D5A4C' : '#ccc',
-                          backgroundColor: action.completed ? '#3D5A4C' : 'transparent',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          marginTop: '0.2vw'
-                        }}
-                      >
-                        {action.completed && (
-                          <span style={{ color: '#fff', fontSize: '0.7vw' }}>✓</span>
-                        )}
-                      </button>
-                      <div style={{ flex: 1 }}>
-                        <p style={{
-                          fontSize: '0.9vw',
-                          color: action.completed ? '#666' : '#1a1a1a',
-                          textDecoration: action.completed ? 'line-through' : 'none',
-                          margin: 0,
-                          marginBottom: '0.3vw'
-                        }}>
-                          {action.action}
-                        </p>
-                        <p style={{ fontSize: '0.75vw', color: '#3D5A4C', margin: 0 }}>
-                          📅 {action.timeline}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <h2 style={{
-              fontSize: '1.1vw',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              fontFamily: 'Georgia, serif',
-              marginBottom: '1.5vw'
-            }}>
-              Quick Reference
-            </h2>
-
-            <div style={{
-              padding: '1.2vw',
-              backgroundColor: '#FFF8F0',
-              borderRadius: '0.8vw',
-              marginBottom: '1vw'
-            }}>
-              <h3 style={{ fontSize: '0.95vw', fontWeight: 500, color: '#8B4513', marginBottom: '0.5vw' }}>
-                Drama Triangle
-              </h3>
-              <p style={{ fontSize: '0.85vw', color: '#666', lineHeight: 1.5, margin: 0 }}>
-                Victim • Persecutor • Rescuer
-              </p>
             </div>
-
-            <div style={{
-              padding: '1.2vw',
-              backgroundColor: '#F0F7F4',
-              borderRadius: '0.8vw',
-              marginBottom: '1vw'
-            }}>
-              <h3 style={{ fontSize: '0.95vw', fontWeight: 500, color: '#3D5A4C', marginBottom: '0.5vw' }}>
-                Compassion Triangle
-              </h3>
-              <p style={{ fontSize: '0.85vw', color: '#666', lineHeight: 1.5, margin: 0 }}>
-                Vulnerable • Assertive • Caring
-              </p>
-            </div>
-
-            <div style={{
-              padding: '1.2vw',
-              backgroundColor: '#F5F5FF',
-              borderRadius: '0.8vw',
-              marginBottom: '1.5vw'
-            }}>
-              <h3 style={{ fontSize: '0.95vw', fontWeight: 500, color: '#4B0082', marginBottom: '0.5vw' }}>
-                Coaching Arc
-              </h3>
-              <p style={{ fontSize: '0.8vw', color: '#666', lineHeight: 1.6, margin: 0 }}>
-                Opening → Exploration → Insight → Action → Closing
-              </p>
-            </div>
-
-            <h3 style={{
-              fontSize: '0.95vw',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              marginBottom: '1vw'
-            }}>
-              Starters
-            </h3>
-            
-            {[
-              "I'm struggling with a conflict...",
-              "I notice I keep rescuing...",
-              "How do I set boundaries?",
-            ].map((starter, i) => (
-              <button
-                key={i}
-                onClick={() => setInput(starter)}
-                disabled={sessionEnded}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.8vw 1vw',
-                  marginBottom: '0.5vw',
-                  fontSize: '0.85vw',
-                  color: sessionEnded ? '#999' : '#3D5A4C',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '0.5vw',
-                  textAlign: 'left',
-                  cursor: sessionEnded ? 'not-allowed' : 'pointer',
-                  opacity: sessionEnded ? 0.5 : 1
-                }}
-              >
-                {starter}
-              </button>
-            ))}
           </>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
-        }
-      `}</style>
     </div>
   )
 }
