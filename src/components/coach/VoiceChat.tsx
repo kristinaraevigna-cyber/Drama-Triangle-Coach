@@ -469,3 +469,132 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
                 width: '4vw',
                 height: '4vw',
                 borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: isMuted ? 'rgba(168, 84, 84, 0.15)' : '#f0f0f0',
+                color: isMuted ? '#A85454' : '#666',
+                fontSize: '1.5vw',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? '🔇' : '🎤'}
+            </button>
+
+            {/* End call button */}
+            <button
+              onClick={disconnectSession}
+              style={{
+                width: '5vw',
+                height: '5vw',
+                borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: '#A85454',
+                color: '#ffffff',
+                fontSize: '1.8vw',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(168, 84, 84, 0.4)',
+                transition: 'all 0.2s'
+              }}
+              title="End session"
+            >
+              📵
+            </button>
+
+            {/* Speaker button */}
+            <button
+              onClick={toggleSpeaker}
+              style={{
+                width: '4vw',
+                height: '4vw',
+                borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: !isSpeakerOn ? 'rgba(168, 84, 84, 0.15)' : '#f0f0f0',
+                color: !isSpeakerOn ? '#A85454' : '#666',
+                fontSize: '1.5vw',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}
+            >
+              {isSpeakerOn ? '🔊' : '🔈'}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={connectSession}
+            disabled={isConnecting}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1vw',
+              padding: '1.3vw 3vw',
+              backgroundColor: isConnecting ? '#ccc' : '#3D5A4C',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '3vw',
+              cursor: isConnecting ? 'not-allowed' : 'pointer',
+              fontSize: '1.15vw',
+              fontWeight: 500,
+              boxShadow: isConnecting ? 'none' : '0 4px 20px rgba(61, 90, 76, 0.4)',
+              transition: 'all 0.2s'
+            }}
+          >
+            {isConnecting ? (
+              <>
+                <span style={{ 
+                  display: 'inline-block',
+                  animation: 'spin 1s linear infinite' 
+                }}>⏳</span>
+                Connecting...
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: '1.3vw' }}>📞</span>
+                Start Voice Session
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Instructions */}
+      {!isConnected && (
+        <p style={{
+          fontSize: '0.95vw',
+          color: '#999',
+          marginTop: '2.5vw',
+          textAlign: 'center',
+          maxWidth: '28vw',
+          lineHeight: 1.6
+        }}>
+          Click to start a voice conversation with your coach. 
+          Speak naturally in your preferred language - no typing needed.
+        </p>
+      )}
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.02); opacity: 0.4; }
+        }
+        @keyframes ping {
+          0% { transform: scale(1); opacity: 1; }
+          75%, 100% { transform: scale(1.4); opacity: 0; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
