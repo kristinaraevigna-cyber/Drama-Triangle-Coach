@@ -2,29 +2,22 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { VoiceChat } from '@/components/coach/VoiceChat'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  timestamp: number
 }
 
 export default function CoachPage() {
   const router = useRouter()
+  const [mode, setMode] = useState<'select' | 'text' | 'voice'>('select')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [sessionStarted, setSessionStarted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
-  // Voice mode states
-  const [voiceMode, setVoiceMode] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null)
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -34,193 +27,27 @@ export default function CoachPage() {
     scrollToBottom()
   }, [messages])
 
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      if (SpeechRecognitionAPI) {
-        recognitionRef.current = new SpeechRecognitionAPI()
-        recognitionRef.current.continuous = false
-        recognitionRef.current.interimResults = false
-        recognitionRef.current.lang = 'en-US'
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognitionRef.current.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript
-          setVoiceStatus('processing')
-          handleVoiceInput(transcript)
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognitionRef.current.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error)
-          setIsListening(false)
-          setVoiceStatus('idle')
-        }
-
-        recognitionRef.current.onend = () => {
-          setIsListening(false)
-        }
-      }
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort()
-      }
-      window.speechSynthesis?.cancel()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const startListening = () => {
-    if (recognitionRef.current && !isListening && !isSpeaking) {
-      try {
-        window.speechSynthesis?.cancel()
-        recognitionRef.current.start()
-        setIsListening(true)
-        setVoiceStatus('listening')
-      } catch (error) {
-        console.error('Error starting recognition:', error)
-      }
-    }
-  }
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop()
-      setIsListening(false)
-      setVoiceStatus('idle')
-    }
-  }
-
-  const speakResponse = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-      
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 0.9
-      utterance.pitch = 1
-      utterance.volume = 1
-      
-      const voices = window.speechSynthesis.getVoices()
-      const preferredVoice = voices.find(v => 
-        v.name.includes('Samantha') || 
-        v.name.includes('Google') || 
-        v.name.includes('Natural') ||
-        v.lang === 'en-US'
-      )
-      if (preferredVoice) {
-        utterance.voice = preferredVoice
-      }
-
-      utterance.onstart = () => {
-        setIsSpeaking(true)
-        setVoiceStatus('speaking')
-      }
-
-      utterance.onend = () => {
-        setIsSpeaking(false)
-        setVoiceStatus('idle')
-        if (voiceMode) {
-          setTimeout(() => {
-            startListening()
-          }, 500)
-        }
-      }
-
-      utterance.onerror = () => {
-        setIsSpeaking(false)
-        setVoiceStatus('idle')
-      }
-
-      synthRef.current = utterance
-      window.speechSynthesis.speak(utterance)
-    }
-  }
-
-  const handleVoiceInput = async (transcript: string) => {
-    if (!transcript.trim()) {
-      setVoiceStatus('idle')
-      return
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: transcript
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/coach', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content
-          }))
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to get response')
-
-      const data = await response.json()
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.message
-      }
-
-      setMessages(prev => [...prev, assistantMessage])
-
-      if (voiceMode) {
-        speakResponse(data.message)
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      const errorMessage = "I'm having trouble connecting. Let's try again."
-      if (voiceMode) {
-        speakResponse(errorMessage)
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const startSession = async () => {
-    setSessionStarted(true)
-    setIsLoading(true)
-
-    const openingMessage = "Hello! I'm here to support you today as your coach. What's on your mind? What would you like to explore in our session?"
-
-    const assistantMessage: Message = {
+  const startTextSession = () => {
+    setMode('text')
+    setMessages([{
       id: Date.now().toString(),
       role: 'assistant',
-      content: openingMessage
-    }
-
-    setMessages([assistantMessage])
-    setIsLoading(false)
-
-    if (voiceMode) {
-      speakResponse(openingMessage)
-    }
+      content: "Hello! I'm your Compassion Coach. I'm here to support you today using ICF coaching methods and Dr. Karpman's frameworks. What's on your mind? What would you like to explore in our session?",
+      timestamp: Date.now()
+    }])
   }
 
   const startVoiceSession = () => {
-    setVoiceMode(true)
-    startSession()
+    setMode('voice')
   }
 
-  const startTextSession = () => {
-    setVoiceMode(false)
-    startSession()
+  const handleVoiceTranscript = (text: string, role: 'user' | 'assistant') => {
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role,
+      content: text,
+      timestamp: Date.now()
+    }])
   }
 
   const handleSendMessage = async () => {
@@ -229,7 +56,8 @@ export default function CoachPage() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue
+      content: inputValue,
+      timestamp: Date.now()
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -252,26 +80,17 @@ export default function CoachPage() {
 
       const data = await response.json()
       
-      const assistantMessage: Message = {
+      setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message
-      }
-
-      setMessages(prev => [...prev, assistantMessage])
+        content: data.message,
+        timestamp: Date.now()
+      }])
     } catch (error) {
       console.error('Error:', error)
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const endVoiceMode = () => {
-    stopListening()
-    window.speechSynthesis?.cancel()
-    setVoiceMode(false)
-    setVoiceStatus('idle')
-    setIsSpeaking(false)
   }
 
   return (
@@ -343,8 +162,8 @@ export default function CoachPage() {
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Session Selection */}
-        {!sessionStarted && (
+        {/* Mode Selection */}
+        {mode === 'select' && (
           <div style={{
             flex: 1,
             display: 'flex',
@@ -358,8 +177,7 @@ export default function CoachPage() {
               fontWeight: 500,
               color: '#1a1a1a',
               fontFamily: 'Georgia, serif',
-              marginBottom: '1vw',
-              textAlign: 'center'
+              marginBottom: '1vw'
             }}>
               Compassion Coach
             </h1>
@@ -398,12 +216,7 @@ export default function CoachPage() {
                 }}>
                   <span style={{ fontSize: '1.8vw' }}>🎙️</span>
                 </div>
-                <h3 style={{
-                  fontSize: '1.2vw',
-                  fontWeight: 500,
-                  color: '#1a1a1a',
-                  marginBottom: '0.5vw'
-                }}>
+                <h3 style={{ fontSize: '1.2vw', fontWeight: 500, color: '#1a1a1a', marginBottom: '0.5vw' }}>
                   Voice Conversation
                 </h3>
                 <p style={{ fontSize: '0.9vw', color: '#666', lineHeight: 1.5 }}>
@@ -435,12 +248,7 @@ export default function CoachPage() {
                 }}>
                   <span style={{ fontSize: '1.8vw' }}>💬</span>
                 </div>
-                <h3 style={{
-                  fontSize: '1.2vw',
-                  fontWeight: 500,
-                  color: '#1a1a1a',
-                  marginBottom: '0.5vw'
-                }}>
+                <h3 style={{ fontSize: '1.2vw', fontWeight: 500, color: '#1a1a1a', marginBottom: '0.5vw' }}>
                   Text Chat
                 </h3>
                 <p style={{ fontSize: '0.9vw', color: '#666', lineHeight: 1.5 }}>
@@ -451,165 +259,89 @@ export default function CoachPage() {
           </div>
         )}
 
-        {/* Voice Mode UI */}
-        {sessionStarted && voiceMode && (
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4vw',
-            position: 'relative'
-          }}>
-            <button
-              onClick={endVoiceMode}
-              style={{
-                position: 'absolute',
-                top: '2vw',
-                right: '2vw',
-                padding: '0.5vw 1vw',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e0e0e0',
-                borderRadius: '0.4vw',
-                fontSize: '0.9vw',
-                color: '#666',
-                cursor: 'pointer'
-              }}
-            >
-              Switch to Text
-            </button>
-
+        {/* Voice Mode */}
+        {mode === 'voice' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{
-              width: '15vw',
-              height: '15vw',
-              borderRadius: '50%',
-              backgroundColor: voiceStatus === 'listening' ? '#3D5A4C' : 
-                             voiceStatus === 'speaking' ? '#4B0082' : 
-                             voiceStatus === 'processing' ? '#8B4513' : '#e8e8e8',
+              padding: '1vw 2vw',
+              borderBottom: '1px solid #e8e8e8',
+              backgroundColor: '#ffffff',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '3vw',
-              transition: 'all 0.3s',
-              boxShadow: voiceStatus !== 'idle' ? '0 0 40px rgba(61, 90, 76, 0.3)' : 'none'
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}>
-              <span style={{ fontSize: '4vw' }}>
-                {voiceStatus === 'listening' ? '👂' : 
-                 voiceStatus === 'speaking' ? '🗣️' : 
-                 voiceStatus === 'processing' ? '💭' : '🎙️'}
-              </span>
+              <h2 style={{ fontSize: '1.2vw', fontWeight: 500, color: '#1a1a1a', margin: 0 }}>
+                Voice Session
+              </h2>
+              <div style={{ display: 'flex', gap: '1vw' }}>
+                <button
+                  onClick={() => setMode('text')}
+                  style={{
+                    padding: '0.5vw 1vw',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '0.4vw',
+                    fontSize: '0.9vw',
+                    color: '#666',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Switch to Text
+                </button>
+                <button
+                  onClick={() => setMode('select')}
+                  style={{
+                    padding: '0.5vw 1vw',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '0.4vw',
+                    fontSize: '0.9vw',
+                    color: '#666',
+                    cursor: 'pointer'
+                  }}
+                >
+                  End Session
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              <VoiceChat onTranscript={handleVoiceTranscript} />
             </div>
 
-            <h2 style={{
-              fontSize: '1.5vw',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              marginBottom: '0.5vw',
-              fontFamily: 'Georgia, serif'
-            }}>
-              {voiceStatus === 'listening' ? "I'm listening..." : 
-               voiceStatus === 'speaking' ? 'Coach is speaking...' : 
-               voiceStatus === 'processing' ? 'Thinking...' : 'Tap to speak'}
-            </h2>
-
-            <p style={{ fontSize: '1vw', color: '#666', marginBottom: '2vw' }}>
-              {voiceStatus === 'listening' ? 'Share what is on your mind' : 
-               voiceStatus === 'speaking' ? 'Listen to your coach response' : 
-               voiceStatus === 'processing' ? 'Processing your message' : 'Click the button below'}
-            </p>
-
-            {voiceStatus === 'idle' && !isLoading && (
-              <button
-                onClick={startListening}
-                style={{
-                  padding: '1vw 2.5vw',
-                  backgroundColor: '#3D5A4C',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '0.5vw',
-                  fontSize: '1vw',
-                  cursor: 'pointer',
-                  fontWeight: 500
-                }}
-              >
-                Start Speaking
-              </button>
-            )}
-
-            {voiceStatus === 'listening' && (
-              <button
-                onClick={stopListening}
-                style={{
-                  padding: '1vw 2.5vw',
-                  backgroundColor: '#A85454',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '0.5vw',
-                  fontSize: '1vw',
-                  cursor: 'pointer',
-                  fontWeight: 500
-                }}
-              >
-                Stop Listening
-              </button>
-            )}
-
-            {voiceStatus === 'speaking' && (
-              <button
-                onClick={() => {
-                  window.speechSynthesis?.cancel()
-                  setIsSpeaking(false)
-                  setVoiceStatus('idle')
-                }}
-                style={{
-                  padding: '1vw 2.5vw',
-                  backgroundColor: '#666',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '0.5vw',
-                  fontSize: '1vw',
-                  cursor: 'pointer',
-                  fontWeight: 500
-                }}
-              >
-                Skip Response
-              </button>
-            )}
-
+            {/* Transcript (collapsible) */}
             {messages.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                bottom: '2vw',
-                left: '2vw',
-                right: '2vw',
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                borderRadius: '0.8vw',
-                padding: '1.5vw',
-                maxHeight: '15vh',
-                overflowY: 'auto'
+              <details style={{
+                borderTop: '1px solid #e8e8e8',
+                backgroundColor: '#fafafa'
               }}>
-                <p style={{ fontSize: '0.8vw', color: '#999', marginBottom: '0.5vw' }}>
-                  Last exchange:
-                </p>
-                {messages.slice(-2).map((msg) => (
-                  <p key={msg.id} style={{
-                    fontSize: '0.9vw',
-                    color: msg.role === 'assistant' ? '#3D5A4C' : '#333',
-                    marginBottom: '0.3vw',
-                    fontStyle: msg.role === 'assistant' ? 'italic' : 'normal'
-                  }}>
-                    <strong>{msg.role === 'assistant' ? 'Coach: ' : 'You: '}</strong>
-                    {msg.content.length > 150 ? msg.content.substring(0, 150) + '...' : msg.content}
-                  </p>
-                ))}
-              </div>
+                <summary style={{
+                  padding: '1vw 2vw',
+                  cursor: 'pointer',
+                  fontSize: '0.9vw',
+                  color: '#666'
+                }}>
+                  View Transcript ({messages.length} messages)
+                </summary>
+                <div style={{ padding: '0 2vw 1vw 2vw', maxHeight: '15vh', overflowY: 'auto' }}>
+                  {messages.map((msg) => (
+                    <p key={msg.id} style={{
+                      fontSize: '0.85vw',
+                      color: msg.role === 'assistant' ? '#3D5A4C' : '#333',
+                      marginBottom: '0.5vw'
+                    }}>
+                      <strong>{msg.role === 'assistant' ? 'Coach: ' : 'You: '}</strong>
+                      {msg.content}
+                    </p>
+                  ))}
+                </div>
+              </details>
             )}
           </div>
         )}
 
-        {/* Text Mode UI */}
-        {sessionStarted && !voiceMode && (
+        {/* Text Mode */}
+        {mode === 'text' && (
           <>
             <div style={{
               padding: '1.5vw 2vw',
@@ -620,39 +352,46 @@ export default function CoachPage() {
               alignItems: 'center'
             }}>
               <div>
-                <h1 style={{
-                  fontSize: '1.3vw',
-                  fontWeight: 500,
-                  color: '#1a1a1a',
-                  margin: 0
-                }}>
+                <h1 style={{ fontSize: '1.3vw', fontWeight: 500, color: '#1a1a1a', margin: 0 }}>
                   Compassion Coach
                 </h1>
                 <p style={{ fontSize: '0.85vw', color: '#666', margin: 0 }}>
                   ICF-style coaching session
                 </p>
               </div>
-              <button
-                onClick={() => setVoiceMode(true)}
-                style={{
-                  padding: '0.5vw 1vw',
-                  backgroundColor: '#F0F7F4',
-                  border: '1px solid #3D5A4C',
-                  borderRadius: '0.4vw',
-                  fontSize: '0.9vw',
-                  color: '#3D5A4C',
-                  cursor: 'pointer'
-                }}
-              >
-                Switch to Voice
-              </button>
+              <div style={{ display: 'flex', gap: '1vw' }}>
+                <button
+                  onClick={() => setMode('voice')}
+                  style={{
+                    padding: '0.5vw 1vw',
+                    backgroundColor: '#F0F7F4',
+                    border: '1px solid #3D5A4C',
+                    borderRadius: '0.4vw',
+                    fontSize: '0.9vw',
+                    color: '#3D5A4C',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🎙️ Switch to Voice
+                </button>
+                <button
+                  onClick={() => setMode('select')}
+                  style={{
+                    padding: '0.5vw 1vw',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '0.4vw',
+                    fontSize: '0.9vw',
+                    color: '#666',
+                    cursor: 'pointer'
+                  }}
+                >
+                  End Session
+                </button>
+              </div>
             </div>
 
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '2vw'
-            }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '2vw' }}>
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -678,13 +417,12 @@ export default function CoachPage() {
               ))}
 
               {isLoading && (
-                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '1.5vw' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                   <div style={{
                     padding: '1.2vw 1.5vw',
                     borderRadius: '1vw',
                     backgroundColor: '#ffffff',
                     border: '1px solid #e8e8e8',
-                    fontSize: '1vw',
                     color: '#666'
                   }}>
                     Thinking...
@@ -725,7 +463,6 @@ export default function CoachPage() {
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '0.5vw',
-                    fontSize: '1vw',
                     cursor: inputValue.trim() && !isLoading ? 'pointer' : 'not-allowed'
                   }}
                 >
