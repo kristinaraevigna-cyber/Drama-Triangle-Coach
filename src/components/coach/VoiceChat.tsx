@@ -9,9 +9,6 @@ const LANGUAGES = [
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'it', name: 'Italiano', flag: '🇮🇹' },
   { code: 'pt', name: 'Português', flag: '🇧🇷' },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
-  { code: 'pl', name: 'Polski', flag: '🇵🇱' },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
   { code: 'ja', name: '日本語', flag: '🇯🇵' },
   { code: 'ko', name: '한국어', flag: '🇰🇷' },
   { code: 'zh', name: '中文', flag: '🇨🇳' },
@@ -48,21 +45,6 @@ Guide them toward Compassion Triangle alternatives:
 - ASSERTIVE: Setting boundaries with respect
 - CARING: Supporting without creating dependency
 
-## CONVERSATION FLOW
-1. CONNECT - Warm greeting, be present
-2. EXPLORE - "What's on your mind today?"
-3. DEEPEN - Ask curious questions about feelings and patterns
-4. AWARENESS - Help them see Drama Triangle patterns
-5. POSSIBILITIES - "What options do you see?"
-6. COMPASSION - Guide toward Compassion Triangle alternatives
-7. ACTION - "What's one small step you could take?"
-
-## IMPORTANT SAFETY NOTE
-If someone expresses thoughts of self-harm or harming others:
-1. Express genuine care and concern
-2. Gently encourage them to speak with a mental health professional
-3. Provide crisis resources if appropriate
-
 Remember: You're having a voice conversation. Be natural, warm, and present. Respond in ${languageName}.`
 }
 
@@ -80,7 +62,6 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
   const [isAISpeaking, setIsAISpeaking] = useState(false)
   const [showLanguages, setShowLanguages] = useState(false)
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const peerConnection = useRef<RTCPeerConnection | null>(null)
   const dataChannel = useRef<RTCDataChannel | null>(null)
   const audioElement = useRef<HTMLAudioElement | null>(null)
@@ -159,7 +140,6 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
         
         setTimeout(() => {
           const greeting = getGreeting(selectedLanguage)
-          
           const responseCreate = {
             type: 'response.create',
             response: {
@@ -219,9 +199,6 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
       de: "Hallo! Ich bin Ihr Mitgefühls-Coach. Ich bin heute hier, um Sie zu unterstützen. Was beschäftigt Sie?",
       it: "Ciao! Sono il tuo Coach della Compassione. Sono qui per supportarti oggi. Cosa hai in mente?",
       pt: "Olá! Sou seu Coach de Compaixão. Estou aqui para apoiá-lo hoje. O que está em sua mente?",
-      nl: "Hallo! Ik ben je Compassie Coach. Ik ben hier om je vandaag te ondersteunen. Wat houdt je bezig?",
-      pl: "Cześć! Jestem Twoim Coachem Współczucia. Jestem tu, aby Cię dziś wesprzeć. Co masz na myśli?",
-      ru: "Здравствуйте! Я ваш Коуч Сострадания. Я здесь, чтобы поддержать вас сегодня. Что у вас на уме?",
       ja: "こんにちは！私はあなたのコンパッションコーチです。今日はあなたをサポートするためにここにいます。何を考えていますか？",
       ko: "안녕하세요! 저는 당신의 컴패션 코치입니다. 오늘 당신을 지원하기 위해 여기 있습니다. 무슨 생각을 하고 계세요?",
       zh: "你好！我是你的慈悲教练。我今天在这里支持你。你在想什么？",
@@ -292,7 +269,7 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
 
     setIsConnected(false)
     setIsAISpeaking(false)
-    setStatus('Disconnected')
+    setStatus('Session ended')
   }, [])
 
   const toggleMute = () => {
@@ -301,6 +278,7 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
       if (audioTrack) {
         audioTrack.enabled = isMuted
         setIsMuted(!isMuted)
+        setStatus(isMuted ? 'Microphone on' : 'Microphone muted')
       }
     }
   }
@@ -319,30 +297,31 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      padding: '2vw'
+      padding: '3vw',
+      backgroundColor: '#FAFAF8'
     }}>
       {/* Visual feedback circle */}
-      <div style={{
-        position: 'relative',
-        marginBottom: '2vw'
-      }}>
+      <div style={{ position: 'relative', marginBottom: '2.5vw' }}>
         <div style={{
-          width: '12vw',
-          height: '12vw',
+          width: '14vw',
+          height: '14vw',
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          transition: 'all 0.3s',
+          transition: 'all 0.3s ease',
           backgroundColor: isConnected 
             ? isAISpeaking 
-              ? 'rgba(75, 0, 130, 0.3)' 
-              : 'rgba(61, 90, 76, 0.2)'
+              ? '#4B0082'
+              : '#3D5A4C'
             : '#e8e8e8',
-          boxShadow: isAISpeaking ? '0 0 40px rgba(75, 0, 130, 0.4)' : 'none',
-          animation: isAISpeaking ? 'pulse 1.5s infinite' : 'none'
+          boxShadow: isConnected
+            ? isAISpeaking 
+              ? '0 0 60px rgba(75, 0, 130, 0.5), 0 0 100px rgba(75, 0, 130, 0.3)'
+              : '0 0 40px rgba(61, 90, 76, 0.3)'
+            : 'none'
         }}>
-          <span style={{ fontSize: '3vw' }}>
+          <span style={{ fontSize: '4vw' }}>
             {isConnected 
               ? isAISpeaking ? '🗣️' : '👂'
               : '🎙️'
@@ -350,26 +329,63 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
           </span>
         </div>
         
+        {/* Pulsing rings when AI is speaking */}
         {isAISpeaking && (
+          <>
+            <div style={{
+              position: 'absolute',
+              inset: '-10px',
+              borderRadius: '50%',
+              border: '2px solid rgba(75, 0, 130, 0.4)',
+              animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite'
+            }} />
+            <div style={{
+              position: 'absolute',
+              inset: '-20px',
+              borderRadius: '50%',
+              border: '1px solid rgba(75, 0, 130, 0.2)',
+              animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+              animationDelay: '0.3s'
+            }} />
+          </>
+        )}
+
+        {/* Listening indicator */}
+        {isConnected && !isAISpeaking && (
           <div style={{
             position: 'absolute',
-            inset: '-8px',
+            inset: '-5px',
             borderRadius: '50%',
-            border: '2px solid rgba(75, 0, 130, 0.3)',
-            animation: 'ping 1.5s infinite'
+            border: '3px solid rgba(61, 90, 76, 0.5)',
+            animation: 'pulse 2s ease-in-out infinite'
           }} />
         )}
       </div>
 
       {/* Status */}
       <p style={{
-        fontSize: '1.1vw',
-        color: '#666',
-        marginBottom: '1.5vw',
-        textAlign: 'center'
+        fontSize: '1.3vw',
+        color: isConnected ? '#3D5A4C' : '#666',
+        marginBottom: '1vw',
+        textAlign: 'center',
+        fontWeight: 500
       }}>
         {status}
       </p>
+
+      {/* Instruction text */}
+      {isConnected && (
+        <p style={{
+          fontSize: '0.95vw',
+          color: '#999',
+          marginBottom: '2vw',
+          textAlign: 'center'
+        }}>
+          {isAISpeaking 
+            ? 'Listen to your coach...' 
+            : 'Speak naturally - I\'m listening'}
+        </p>
+      )}
 
       {/* Language selector (only when disconnected) */}
       {!isConnected && (
@@ -379,18 +395,19 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5vw',
+              gap: '0.8vw',
               padding: '0.8vw 1.5vw',
               backgroundColor: '#ffffff',
               border: '1px solid #e0e0e0',
               borderRadius: '0.5vw',
               cursor: 'pointer',
-              fontSize: '0.95vw'
+              fontSize: '1vw'
             }}
           >
-            <span>🌐</span>
+            <span style={{ fontSize: '1.2vw' }}>🌐</span>
             <span>{LANGUAGES.find(l => l.code === selectedLanguage)?.flag}</span>
             <span>{LANGUAGES.find(l => l.code === selectedLanguage)?.name}</span>
+            <span style={{ fontSize: '0.8vw', color: '#999' }}>▼</span>
           </button>
           
           {showLanguages && (
@@ -405,8 +422,8 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
               borderRadius: '0.5vw',
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
               padding: '0.5vw',
-              minWidth: '12vw',
-              maxHeight: '20vw',
+              minWidth: '14vw',
+              maxHeight: '25vw',
               overflowY: 'auto',
               zIndex: 50
             }}>
@@ -420,19 +437,19 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    padding: '0.6vw 1vw',
+                    padding: '0.7vw 1vw',
                     borderRadius: '0.3vw',
                     border: 'none',
                     backgroundColor: selectedLanguage === lang.code ? '#F0F7F4' : 'transparent',
                     color: selectedLanguage === lang.code ? '#3D5A4C' : '#333',
                     cursor: 'pointer',
-                    fontSize: '0.9vw',
+                    fontSize: '0.95vw',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5vw'
+                    gap: '0.8vw'
                   }}
                 >
-                  <span>{lang.flag}</span>
+                  <span style={{ fontSize: '1.2vw' }}>{lang.flag}</span>
                   <span>{lang.name}</span>
                 </button>
               ))}
@@ -442,119 +459,13 @@ export function VoiceChat({ onTranscript }: VoiceChatProps) {
       )}
 
       {/* Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1vw' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5vw' }}>
         {isConnected ? (
           <>
             {/* Mute button */}
             <button
               onClick={toggleMute}
               style={{
-                padding: '1vw',
+                width: '4vw',
+                height: '4vw',
                 borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: isMuted ? 'rgba(168, 84, 84, 0.2)' : '#f0f0f0',
-                color: isMuted ? '#A85454' : '#666',
-                fontSize: '1.5vw'
-              }}
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? '🔇' : '🎤'}
-            </button>
-
-            {/* End call button */}
-            <button
-              onClick={disconnectSession}
-              style={{
-                padding: '1.2vw',
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: '#A85454',
-                color: '#ffffff',
-                fontSize: '1.5vw'
-              }}
-              title="End session"
-            >
-              📞
-            </button>
-
-            {/* Speaker button */}
-            <button
-              onClick={toggleSpeaker}
-              style={{
-                padding: '1vw',
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: !isSpeakerOn ? 'rgba(168, 84, 84, 0.2)' : '#f0f0f0',
-                color: !isSpeakerOn ? '#A85454' : '#666',
-                fontSize: '1.5vw'
-              }}
-              title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}
-            >
-              {isSpeakerOn ? '🔊' : '🔈'}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={connectSession}
-            disabled={isConnecting}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.8vw',
-              padding: '1.2vw 2.5vw',
-              backgroundColor: isConnecting ? '#ccc' : '#3D5A4C',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '3vw',
-              cursor: isConnecting ? 'not-allowed' : 'pointer',
-              fontSize: '1.1vw',
-              fontWeight: 500
-            }}
-          >
-            {isConnecting ? (
-              <>
-                <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                Connecting...
-              </>
-            ) : (
-              <>
-                <span>📞</span>
-                Start Voice Session
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Instructions */}
-      {!isConnected && (
-        <p style={{
-          fontSize: '0.9vw',
-          color: '#999',
-          marginTop: '2vw',
-          textAlign: 'center',
-          maxWidth: '25vw'
-        }}>
-          Click to start a voice conversation with your coach. Speak naturally in your preferred language.
-        </p>
-      )}
-
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.8; }
-        }
-        @keyframes ping {
-          0% { transform: scale(1); opacity: 1; }
-          75%, 100% { transform: scale(1.3); opacity: 0; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  )
-}
