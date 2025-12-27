@@ -135,11 +135,31 @@ const injectStyles = () => {
     const style = document.createElement('style')
     style.id = 'voice-chat-styles'
     style.textContent = `
-      @keyframes soundBar1 { 0%, 100% { height: 0.6vw; } 50% { height: 2vw; } }
-      @keyframes soundBar2 { 0%, 100% { height: 0.8vw; } 50% { height: 2.5vw; } }
-      @keyframes soundBar3 { 0%, 100% { height: 1vw; } 50% { height: 3vw; } }
-      @keyframes soundBar4 { 0%, 100% { height: 0.8vw; } 50% { height: 2.5vw; } }
-      @keyframes soundBar5 { 0%, 100% { height: 0.6vw; } 50% { height: 2vw; } }
+      @keyframes soundBarActive1 {
+        0%, 100% { transform: scaleY(0.3); }
+        50% { transform: scaleY(1); }
+      }
+      @keyframes soundBarActive2 {
+        0%, 100% { transform: scaleY(0.4); }
+        50% { transform: scaleY(1); }
+      }
+      @keyframes soundBarActive3 {
+        0%, 100% { transform: scaleY(0.5); }
+        50% { transform: scaleY(1); }
+      }
+      .sound-bar {
+        width: 6px;
+        height: 40px;
+        border-radius: 3px;
+        transform: scaleY(0.2);
+        transform-origin: center;
+        transition: transform 0.2s ease;
+      }
+      .sound-bar.active:nth-child(1) { animation: soundBarActive1 0.5s ease-in-out infinite 0s; }
+      .sound-bar.active:nth-child(2) { animation: soundBarActive2 0.5s ease-in-out infinite 0.1s; }
+      .sound-bar.active:nth-child(3) { animation: soundBarActive3 0.5s ease-in-out infinite 0.2s; }
+      .sound-bar.active:nth-child(4) { animation: soundBarActive2 0.5s ease-in-out infinite 0.1s; }
+      .sound-bar.active:nth-child(5) { animation: soundBarActive1 0.5s ease-in-out infinite 0s; }
     `
     document.head.appendChild(style)
   }
@@ -400,27 +420,13 @@ export function VoiceChat() {
   }
 
   const SoundBars = ({ isActive, color }: { isActive: boolean; color: string }) => {
-    const bars = [
-      { animation: 'soundBar1 0.5s ease-in-out infinite', delay: '0s' },
-      { animation: 'soundBar2 0.5s ease-in-out infinite', delay: '0.1s' },
-      { animation: 'soundBar3 0.5s ease-in-out infinite', delay: '0.2s' },
-      { animation: 'soundBar4 0.5s ease-in-out infinite', delay: '0.1s' },
-      { animation: 'soundBar5 0.5s ease-in-out infinite', delay: '0s' },
-    ]
-    
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3vw', height: '3vw' }}>
-        {bars.map((bar, i) => (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', height: '50px' }}>
+        {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            style={{
-              width: '0.4vw',
-              height: isActive ? undefined : '0.8vw',
-              backgroundColor: color,
-              borderRadius: '0.2vw',
-              animation: isActive ? bar.animation : 'none',
-              animationDelay: bar.delay,
-            }}
+            className={`sound-bar ${isActive ? 'active' : ''}`}
+            style={{ backgroundColor: color }}
           />
         ))}
       </div>
@@ -490,7 +496,7 @@ export function VoiceChat() {
   if (isGeneratingSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#FAFAF8' }}>
-        <div style={{ width: '8vw', height: '8vw', borderRadius: '50%', backgroundColor: '#3D5A4C', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5vw' }}>
+        <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: '#3D5A4C', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
           <SoundBars isActive={true} color="rgba(255,255,255,0.9)" />
         </div>
         <p style={{ fontSize: '1.2vw', color: '#3D5A4C', fontWeight: 500 }}>Generating session summary...</p>
@@ -500,11 +506,11 @@ export function VoiceChat() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '3vw', backgroundColor: '#FAFAF8' }}>
-      <div style={{ position: 'relative', marginBottom: '2vw' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '48px', backgroundColor: '#FAFAF8' }}>
+      <div style={{ position: 'relative', marginBottom: '32px' }}>
         <div style={{
-          width: '12vw', 
-          height: '12vw', 
+          width: '160px', 
+          height: '160px', 
           borderRadius: '50%', 
           display: 'flex', 
           alignItems: 'center', 
@@ -520,23 +526,23 @@ export function VoiceChat() {
         </div>
       </div>
 
-      <p style={{ fontSize: '1.2vw', color: isConnected ? '#3D5A4C' : '#666', marginBottom: '0.5vw', fontWeight: 500 }}>{status}</p>
+      <p style={{ fontSize: '20px', color: isConnected ? '#3D5A4C' : '#666', marginBottom: '8px', fontWeight: 500 }}>{status}</p>
       
       {isConnected && (
-        <p style={{ fontSize: '0.9vw', color: '#999', marginBottom: '1.5vw' }}>
+        <p style={{ fontSize: '14px', color: '#999', marginBottom: '24px' }}>
           {isAISpeaking ? 'Listen to your coach...' : 'Take your time - speak when ready'}
         </p>
       )}
 
       {!isConnected && (
-        <div style={{ position: 'relative', marginBottom: '1.5vw' }}>
-          <button onClick={() => setShowLanguages(!showLanguages)} style={{ display: 'flex', alignItems: 'center', gap: '0.6vw', padding: '0.6vw 1.2vw', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '0.5vw', cursor: 'pointer', fontSize: '0.9vw' }}>
+        <div style={{ position: 'relative', marginBottom: '24px' }}>
+          <button onClick={() => setShowLanguages(!showLanguages)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
             {LANGUAGES.find(l => l.code === selectedLanguage)?.flag} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
           </button>
           {showLanguages && (
-            <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '0.5vw', padding: '0.5vw', marginBottom: '0.5vw', zIndex: 50, minWidth: '10vw' }}>
+            <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '8px', marginBottom: '8px', zIndex: 50, minWidth: '150px' }}>
               {LANGUAGES.map(lang => (
-                <button key={lang.code} onClick={() => { setSelectedLanguage(lang.code); setShowLanguages(false) }} style={{ display: 'block', width: '100%', padding: '0.5vw 0.8vw', border: 'none', backgroundColor: selectedLanguage === lang.code ? '#F0F7F4' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '0.85vw', borderRadius: '0.3vw' }}>
+                <button key={lang.code} onClick={() => { setSelectedLanguage(lang.code); setShowLanguages(false) }} style={{ display: 'block', width: '100%', padding: '8px 12px', border: 'none', backgroundColor: selectedLanguage === lang.code ? '#F0F7F4' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '14px', borderRadius: '4px' }}>
                   {lang.flag} {lang.name}
                 </button>
               ))}
@@ -545,28 +551,28 @@ export function VoiceChat() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1vw' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {isConnected ? (
           <>
-            <button onClick={toggleMute} style={{ width: '3.5vw', height: '3.5vw', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: isMuted ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '1.3vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isMuted ? 'Unmute' : 'Mute'}>
+            <button onClick={toggleMute} style={{ width: '56px', height: '56px', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: isMuted ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isMuted ? 'Unmute' : 'Mute'}>
               {isMuted ? '🔇' : '🎤'}
             </button>
-            <button onClick={disconnectSession} style={{ padding: '0.8vw 1.5vw', borderRadius: '2vw', border: 'none', cursor: 'pointer', backgroundColor: '#A85454', color: '#fff', fontSize: '0.95vw', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5vw', boxShadow: '0 4px 15px rgba(168,84,84,0.3)', fontWeight: 500 }}>
+            <button onClick={disconnectSession} style={{ padding: '12px 24px', borderRadius: '32px', border: 'none', cursor: 'pointer', backgroundColor: '#A85454', color: '#fff', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(168,84,84,0.3)', fontWeight: 500 }}>
               End Session
             </button>
-            <button onClick={toggleSpeaker} style={{ width: '3.5vw', height: '3.5vw', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: !isSpeakerOn ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '1.3vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}>
+            <button onClick={toggleSpeaker} style={{ width: '56px', height: '56px', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: !isSpeakerOn ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}>
               {isSpeakerOn ? '🔊' : '🔈'}
             </button>
           </>
         ) : (
-          <button onClick={connectSession} disabled={isConnecting} style={{ padding: '1vw 2.5vw', backgroundColor: isConnecting ? '#ccc' : '#3D5A4C', color: '#fff', border: 'none', borderRadius: '3vw', cursor: isConnecting ? 'not-allowed' : 'pointer', fontSize: '1vw', fontWeight: 500, boxShadow: isConnecting ? 'none' : '0 4px 20px rgba(61,90,76,0.3)' }}>
+          <button onClick={connectSession} disabled={isConnecting} style={{ padding: '16px 40px', backgroundColor: isConnecting ? '#ccc' : '#3D5A4C', color: '#fff', border: 'none', borderRadius: '48px', cursor: isConnecting ? 'not-allowed' : 'pointer', fontSize: '16px', fontWeight: 500, boxShadow: isConnecting ? 'none' : '0 4px 20px rgba(61,90,76,0.3)' }}>
             {isConnecting ? 'Connecting...' : 'Start Coaching Session'}
           </button>
         )}
       </div>
 
       {!isConnected && (
-        <p style={{ fontSize: '0.85vw', color: '#999', marginTop: '2vw', textAlign: 'center', maxWidth: '25vw', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '14px', color: '#999', marginTop: '32px', textAlign: 'center', maxWidth: '400px', lineHeight: 1.6 }}>
           Your coach will ask one question at a time and wait for you to respond. Take your time to reflect before speaking.
         </p>
       )}
