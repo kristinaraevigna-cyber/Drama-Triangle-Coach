@@ -25,128 +25,68 @@ const getSystemPrompt = (languageCode: string) => {
   
   return `You are a Compassion Coach, an ICF-certified professional coach following the 2025 ICF Core Competencies. You specialize in Dr. Stephen Karpman's Drama Triangle and Compassion Triangle frameworks. You are having a VOICE conversation.
 
-## VOICE CONVERSATION STYLE
-- Speak naturally and conversationally, as if in person
-- Keep responses SHORT (2-4 sentences typically)
-- Use warm, empathetic tone
-- No bullet points or lists - speak in flowing sentences
-- Pause and allow silence when appropriate
-- Respond in ${languageName}
+## CRITICAL VOICE RULES - FOLLOW EXACTLY
 
-## ICF COACHING ARC - FOLLOW THIS STRUCTURE
+1. **WAIT FOR THE CLIENT** - After you speak, STOP and wait. Do not continue talking. Let the client respond.
 
-### 1. OPENING & AGREEMENT (First 2-3 exchanges)
-Start by establishing the coaching agreement for THIS session:
-- Warmly greet and create safety
-- Ask: "What would you like to focus on today?" or "What's on your mind?"
-- Then ask: "Why is this important to you RIGHT NOW?"
-- Clarify: "What would you like to walk away with from our conversation today?"
-- This creates clear focus and measures of success
+2. **ONE QUESTION ONLY** - Each response must contain exactly ONE question. Never ask multiple questions.
 
-### 2. EXPLORATION & AWARENESS (Middle of conversation)
-Use powerful questions to deepen understanding:
-- "Tell me more about that..."
+3. **SHORT RESPONSES** - Keep responses to 2-3 sentences maximum. This is a conversation, not a lecture.
+
+4. **NO LISTS** - Never use bullet points or numbered lists. Speak naturally.
+
+5. **RESPOND IN ${languageName}**
+
+## RESPONSE PATTERN
+
+Every response should follow this pattern:
+- Brief acknowledgment or reflection (1 sentence)
+- ONE powerful question (1 sentence)
+- Then STOP and WAIT
+
+Example good response: "It sounds like this situation with your colleague has been weighing on you. What would you most like to be different?"
+
+Example bad response: "I hear you. That must be difficult. What's been happening? How long has this been going on? What have you tried so far?" (TOO MANY QUESTIONS)
+
+## ICF COACHING ARC
+
+### 1. OPENING (First exchange)
+After greeting, ask ONE question: "What would you like to focus on today?"
+Then WAIT for their answer.
+
+### 2. CLARIFYING (Next 1-2 exchanges)  
+Ask ONE of these (not all):
+- "Why is this important to you right now?"
+- "What would you like to walk away with from our conversation?"
+
+### 3. EXPLORATION (Middle of conversation)
+Use ONE powerful question per response:
+- "Tell me more about that."
 - "What are you noticing as you share this?"
 - "What's the impact of this on you?"
-- "What patterns do you see here?"
-- Listen for Drama Triangle roles (Victim, Persecutor, Rescuer)
-- Reflect back what you hear to ensure understanding
-- Notice and name emotions and energy shifts
-- Help them see what they might not be seeing
+- "What patterns do you see?"
 
-### 3. GENERATING POSSIBILITIES
-When awareness emerges, explore options:
-- "What options do you see?"
-- "What else might be possible?"
-- "If you weren't feeling stuck, what might you try?"
-- Support reframing perspectives
-- Guide toward Compassion Triangle alternatives when relevant
-
-### 4. ACTION & ACCOUNTABILITY (Final exchanges)
-Partner with client to design concrete next steps:
-- "What's one thing you could do differently?"
-- "When specifically will you do this?"
-- "How will you hold yourself accountable?"
-- "What support do you need?"
-- Acknowledge their progress and insights
-
-### 5. CLOSING
-- Briefly summarize key insights from the session
-- Acknowledge their work and growth
-- End with encouragement
-
-## 2025 ICF CORE COMPETENCIES TO EMBODY
-
-**Demonstrates Ethical Practice**
-- Maintain confidentiality and appropriate boundaries
-- You are a COACH, not a therapist - refer out if someone needs clinical support
-- If someone mentions self-harm, express care and suggest professional resources
-
-**Embodies a Coaching Mindset**
-- Clients are responsible for their own choices
-- Remain curious, open, and non-judgmental
-- Trust your intuition
-
-**Establishes and Maintains Agreements**
-- Always clarify what they want from THIS conversation
-- Partner on focus and direction
-- Check in: "Is this what you want to explore?"
-
-**Cultivates Trust and Safety**
-- Seek to understand their context, identity, values, beliefs
-- Show empathy and genuine concern
-- Support their expression of feelings without judgment
-
-**Maintains Presence**
-- Stay focused and responsive
-- Be comfortable with silence and not knowing
-- Manage your own responses to stay present
-
-**Listens Actively**
-- Listen for what's said AND unsaid
-- Reflect back to ensure understanding
-- Notice emotions, energy shifts, patterns
-- Integrate words, tone, and meaning
-
-**Evokes Awareness**
-- Ask powerful questions that help them think beyond current patterns
-- Challenge gently to evoke insight
-- Share observations without attachment
-- Help identify factors influencing their patterns
-- Support reframing perspectives
-
-**Facilitates Client Growth**
-- Partner to design goals and actions THEY create
-- Support client autonomy - never tell them what to do
-- Acknowledge their progress and successes
-- Help them integrate new awareness into action
+### 4. ACTION (Toward the end)
+Ask ONE action question:
+- "What's one small step you could take?"
+- "When will you do this?"
 
 ## DRAMA TRIANGLE AWARENESS
 
-When you notice Drama Triangle patterns, gently bring awareness:
+When you notice patterns, gently name them with ONE question:
 
-**VICTIM patterns** ("Poor me", helpless, "I can't"):
-- Help them move to VULNERABLE: Owning feelings while staying capable
-- Ask: "What part of this IS within your control?"
-
-**PERSECUTOR patterns** (Blaming, criticizing, attacking):
-- Help them move to ASSERTIVE: Setting boundaries with respect
-- Ask: "What do YOU need here? How could you express that directly?"
-
-**RESCUER patterns** (Over-helping, fixing, enabling):
-- Help them move to CARING: Supporting without creating dependency
-- Ask: "What would it look like to support them without taking over?"
+VICTIM patterns → "What part of this IS within your control?"
+PERSECUTOR patterns → "What do YOU need here?"
+RESCUER patterns → "What would it look like to support without taking over?"
 
 ## WHAT NOT TO DO
+- Never ask multiple questions in one response
+- Never keep talking after asking a question
 - Never give advice or tell them what to do
-- Don't fix their problems for them
-- Don't analyze them like a therapist
-- Don't lecture or teach (that's for Mentor Coach)
-- Don't skip the opening agreement
-- Don't end without exploring action
-- Don't fill silences unnecessarily
+- Never lecture or explain concepts
+- Never fill silence - let them think
 
-Remember: Be natural, warm, present, and genuinely curious. Partner WITH them - their wisdom is inside them. Your job is to help them access it.`
+Remember: Ask ONE question, then STOP and WAIT for the client to speak.`
 }
 
 interface Message {
@@ -161,6 +101,22 @@ interface SessionSummary {
   compassionShift: string
   actions: Array<{ action: string; timeline: string; accountability: string }>
   sessionTopic: string
+}
+
+// CSS for animations - injected once
+const injectStyles = () => {
+  if (typeof document !== 'undefined' && !document.getElementById('voice-chat-styles')) {
+    const style = document.createElement('style')
+    style.id = 'voice-chat-styles'
+    style.textContent = `
+      @keyframes soundBar1 { 0%, 100% { height: 0.6vw; } 50% { height: 2vw; } }
+      @keyframes soundBar2 { 0%, 100% { height: 0.8vw; } 50% { height: 2.5vw; } }
+      @keyframes soundBar3 { 0%, 100% { height: 1vw; } 50% { height: 3vw; } }
+      @keyframes soundBar4 { 0%, 100% { height: 0.8vw; } 50% { height: 2.5vw; } }
+      @keyframes soundBar5 { 0%, 100% { height: 0.6vw; } 50% { height: 2vw; } }
+    `
+    document.head.appendChild(style)
+  }
 }
 
 export function VoiceChat() {
@@ -183,6 +139,7 @@ export function VoiceChat() {
   const messagesRef = useRef<Message[]>([])
 
   useEffect(() => {
+    injectStyles()
     return () => {
       cleanupConnection()
     }
@@ -197,15 +154,15 @@ export function VoiceChat() {
 
   const getGreeting = (lang: string): string => {
     const greetings: Record<string, string> = {
-      en: "Hello, I'm your Compassion Coach. I'm here to support you today. What would you like to focus on in our conversation?",
-      es: "Hola, soy tu Coach de Compasión. Estoy aquí para apoyarte. ¿En qué te gustaría enfocarte en nuestra conversación?",
-      fr: "Bonjour, je suis votre Coach de Compassion. Je suis là pour vous accompagner. Sur quoi aimeriez-vous vous concentrer aujourd'hui?",
-      de: "Hallo, ich bin Ihr Mitgefühls-Coach. Worauf möchten Sie sich heute konzentrieren?",
-      it: "Ciao, sono il tuo Coach della Compassione. Su cosa vorresti concentrarti oggi?",
-      pt: "Olá, sou seu Coach de Compaixão. No que você gostaria de se concentrar hoje?",
-      ja: "こんにちは、私はあなたのコンパッションコーチです。今日は何に焦点を当てたいですか？",
-      ko: "안녕하세요, 저는 당신의 컴패션 코치입니다. 오늘 무엇에 집중하고 싶으신가요?",
-      zh: "你好，我是你的慈悲教练。今天你想关注什么？",
+      en: "Hello, I'm your Compassion Coach. What would you like to focus on today?",
+      es: "Hola, soy tu Coach de Compasión. ¿En qué te gustaría enfocarte hoy?",
+      fr: "Bonjour, je suis votre Coach. Sur quoi aimeriez-vous vous concentrer aujourd'hui?",
+      de: "Hallo, ich bin Ihr Coach. Worauf möchten Sie sich heute konzentrieren?",
+      it: "Ciao, sono il tuo Coach. Su cosa vorresti concentrarti oggi?",
+      pt: "Olá, sou seu Coach. No que você gostaria de se concentrar hoje?",
+      ja: "こんにちは、コーチです。今日は何に焦点を当てたいですか？",
+      ko: "안녕하세요, 코치입니다. 오늘 무엇에 집중하고 싶으신가요?",
+      zh: "你好，我是你的教练。今天你想关注什么？",
     }
     return greetings[lang] || greetings.en
   }
@@ -219,10 +176,10 @@ export function VoiceChat() {
       case 'response.audio.done':
       case 'response.done':
         setIsAISpeaking(false)
-        setStatus('Listening...')
+        setStatus('Your turn - speak when ready')
         break
       case 'input_audio_buffer.speech_started':
-        setStatus('You are speaking...')
+        setStatus('Listening...')
         break
       case 'input_audio_buffer.speech_stopped':
         setStatus('Processing...')
@@ -290,21 +247,25 @@ export function VoiceChat() {
             input_audio_transcription: { model: 'whisper-1' },
             turn_detection: { 
               type: 'server_vad', 
-              threshold: 0.7,              // Increased from 0.5 - requires louder speech to trigger
-              prefix_padding_ms: 500,      // Increased from 300 - more buffer before speech
-              silence_duration_ms: 1200,   // Increased from 700 - waits longer before responding
+              threshold: 0.8,
+              prefix_padding_ms: 500,
+              silence_duration_ms: 1500,
             },
           },
         }))
         
+        // Only send greeting after a delay, then STOP
         setTimeout(() => {
           const greeting = getGreeting(selectedLanguage)
           messagesRef.current.push({ role: 'assistant', content: greeting })
           dataChannel.current?.send(JSON.stringify({
             type: 'response.create',
-            response: { modalities: ['text', 'audio'], instructions: `Say naturally: "${greeting}"` },
+            response: { 
+              modalities: ['text', 'audio'], 
+              instructions: `Say exactly this greeting, then STOP and wait for the client to speak: "${greeting}"` 
+            },
           }))
-        }, 500)
+        }, 1000)
       }
 
       dataChannel.current.onmessage = (event) => handleRealtimeEvent(JSON.parse(event.data))
@@ -322,7 +283,7 @@ export function VoiceChat() {
 
       await peerConnection.current.setRemoteDescription({ type: 'answer', sdp: await sdpResponse.text() })
       setIsConnected(true)
-      setStatus('Connected - Speak naturally')
+      setStatus('Connected')
       
     } catch (error) {
       console.error('Connection error:', error)
@@ -406,54 +367,59 @@ export function VoiceChat() {
   }
 
   // Sound Bars Component
-  const SoundBars = ({ isActive, color }: { isActive: boolean; color: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3vw', height: '3vw' }}>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          style={{
-            width: '0.4vw',
-            height: isActive ? '1.5vw' : '0.8vw',
-            backgroundColor: color,
-            borderRadius: '0.2vw',
-            animation: isActive ? `soundBar 0.5s ease-in-out infinite ${i * 0.1}s` : 'none',
-          }}
-        />
-      ))}
-      <style>{`
-        @keyframes soundBar {
-          0%, 100% { height: 0.8vw; }
-          50% { height: 2.5vw; }
-        }
-      `}</style>
-    </div>
-  )
+  const SoundBars = ({ isActive, color }: { isActive: boolean; color: string }) => {
+    const bars = [
+      { animation: 'soundBar1 0.5s ease-in-out infinite', delay: '0s' },
+      { animation: 'soundBar2 0.5s ease-in-out infinite', delay: '0.1s' },
+      { animation: 'soundBar3 0.5s ease-in-out infinite', delay: '0.2s' },
+      { animation: 'soundBar4 0.5s ease-in-out infinite', delay: '0.1s' },
+      { animation: 'soundBar5 0.5s ease-in-out infinite', delay: '0s' },
+    ]
+    
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3vw', height: '3vw' }}>
+        {bars.map((bar, i) => (
+          <div
+            key={i}
+            style={{
+              width: '0.4vw',
+              height: isActive ? undefined : '0.8vw',
+              backgroundColor: color,
+              borderRadius: '0.2vw',
+              animation: isActive ? bar.animation : 'none',
+              animationDelay: bar.delay,
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
 
   // Session Summary View
   if (showSummary && sessionSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '2vw', backgroundColor: '#FAFAF8', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '1.5vw', fontWeight: 500, color: '#1a1a1a', marginBottom: '1vw', fontFamily: 'Georgia, serif' }}>Session Complete ✓</h2>
+        <h2 style={{ fontSize: '1.5vw', fontWeight: 500, color: '#1a1a1a', marginBottom: '1vw', fontFamily: 'Georgia, serif' }}>Session Complete</h2>
         
         <div style={{ backgroundColor: '#fff', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw', border: '1px solid #e8e8e8' }}>
           <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '0.5vw', fontWeight: 500 }}>Summary</h3>
           <p style={{ fontSize: '0.95vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{sessionSummary.summary}</p>
         </div>
 
-        {sessionSummary.keyInsights?.length > 0 && (
+        {sessionSummary.keyInsights && sessionSummary.keyInsights.length > 0 && (
           <div style={{ backgroundColor: '#F0F7F4', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
             <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '0.8vw', fontWeight: 500 }}>Key Insights</h3>
             {sessionSummary.keyInsights.map((insight, i) => (
-              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', paddingLeft: '1vw', borderLeft: '2px solid #3D5A4C', lineHeight: 1.5 }}>{insight}</p>
+              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', paddingLeft: '1vw', borderLeft: '2px solid #3D5A4C', lineHeight: 1.5 }}>{String(insight)}</p>
             ))}
           </div>
         )}
 
-        {sessionSummary.dramaPatterns?.length > 0 && (
+        {sessionSummary.dramaPatterns && sessionSummary.dramaPatterns.length > 0 && (
           <div style={{ backgroundColor: '#FFF8F0', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
             <h3 style={{ fontSize: '1vw', color: '#8B4513', marginBottom: '0.8vw', fontWeight: 500 }}>Drama Triangle Patterns Noticed</h3>
             {sessionSummary.dramaPatterns.map((pattern, i) => (
-              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', lineHeight: 1.5 }}>• {pattern}</p>
+              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', lineHeight: 1.5 }}>• {String(pattern)}</p>
             ))}
           </div>
         )}
@@ -461,17 +427,17 @@ export function VoiceChat() {
         {sessionSummary.compassionShift && (
           <div style={{ backgroundColor: '#F5F5FF', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
             <h3 style={{ fontSize: '1vw', color: '#4B0082', marginBottom: '0.5vw', fontWeight: 500 }}>Movement Toward Compassion</h3>
-            <p style={{ fontSize: '0.9vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{sessionSummary.compassionShift}</p>
+            <p style={{ fontSize: '0.9vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.compassionShift)}</p>
           </div>
         )}
 
-        {sessionSummary.actions?.length > 0 && (
+        {sessionSummary.actions && sessionSummary.actions.length > 0 && (
           <div style={{ backgroundColor: '#fff', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw', border: '2px solid #3D5A4C' }}>
-            <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '1vw', fontWeight: 500 }}>✓ Committed Actions</h3>
+            <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '1vw', fontWeight: 500 }}>Committed Actions</h3>
             {sessionSummary.actions.map((action, i) => (
               <div key={i} style={{ padding: '1vw', backgroundColor: '#F0F7F4', borderRadius: '0.5vw', marginBottom: '0.5vw' }}>
-                <p style={{ fontSize: '0.95vw', color: '#1a1a1a', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>{action.action}</p>
-                <p style={{ fontSize: '0.8vw', color: '#666', margin: '0.3vw 0 0 0' }}>📅 {action.timeline} • ✓ {action.accountability}</p>
+                <p style={{ fontSize: '0.95vw', color: '#1a1a1a', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>{String(action.action)}</p>
+                <p style={{ fontSize: '0.8vw', color: '#666', margin: '0.3vw 0 0 0' }}>Timeline: {String(action.timeline)} | Accountability: {String(action.accountability)}</p>
               </div>
             ))}
             <p style={{ fontSize: '0.8vw', color: '#3D5A4C', margin: '1vw 0 0 0', fontStyle: 'italic' }}>Actions saved to your Actions page</p>
@@ -494,8 +460,8 @@ export function VoiceChat() {
   if (isGeneratingSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#FAFAF8' }}>
-        <div style={{ width: '8vw', height: '8vw', borderRadius: '50%', backgroundColor: '#F0F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5vw' }}>
-          <SoundBars isActive={true} color="#3D5A4C" />
+        <div style={{ width: '8vw', height: '8vw', borderRadius: '50%', backgroundColor: '#3D5A4C', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5vw' }}>
+          <SoundBars isActive={true} color="rgba(255,255,255,0.9)" />
         </div>
         <p style={{ fontSize: '1.2vw', color: '#3D5A4C', fontWeight: 500 }}>Generating session summary...</p>
         <p style={{ fontSize: '0.9vw', color: '#666' }}>Extracting insights and actions</p>
@@ -531,7 +497,7 @@ export function VoiceChat() {
       
       {isConnected && (
         <p style={{ fontSize: '0.9vw', color: '#999', marginBottom: '1.5vw' }}>
-          {isAISpeaking ? 'Listen to your coach...' : 'Speak naturally - I\'m listening'}
+          {isAISpeaking ? 'Listen to your coach...' : 'Take your time - speak when ready'}
         </p>
       )}
 
@@ -539,7 +505,7 @@ export function VoiceChat() {
       {!isConnected && (
         <div style={{ position: 'relative', marginBottom: '1.5vw' }}>
           <button onClick={() => setShowLanguages(!showLanguages)} style={{ display: 'flex', alignItems: 'center', gap: '0.6vw', padding: '0.6vw 1.2vw', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '0.5vw', cursor: 'pointer', fontSize: '0.9vw' }}>
-            🌐 {LANGUAGES.find(l => l.code === selectedLanguage)?.flag} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
+            {LANGUAGES.find(l => l.code === selectedLanguage)?.flag} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
           </button>
           {showLanguages && (
             <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '0.5vw', padding: '0.5vw', marginBottom: '0.5vw', zIndex: 50, minWidth: '10vw' }}>
@@ -561,7 +527,7 @@ export function VoiceChat() {
               {isMuted ? '🔇' : '🎤'}
             </button>
             <button onClick={disconnectSession} style={{ padding: '0.8vw 1.5vw', borderRadius: '2vw', border: 'none', cursor: 'pointer', backgroundColor: '#A85454', color: '#fff', fontSize: '0.95vw', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5vw', boxShadow: '0 4px 15px rgba(168,84,84,0.3)', fontWeight: 500 }}>
-              ⏹ End Session
+              End Session
             </button>
             <button onClick={toggleSpeaker} style={{ width: '3.5vw', height: '3.5vw', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: !isSpeakerOn ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '1.3vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}>
               {isSpeakerOn ? '🔊' : '🔈'}
@@ -577,7 +543,7 @@ export function VoiceChat() {
       {/* Instructions (when not connected) */}
       {!isConnected && (
         <p style={{ fontSize: '0.85vw', color: '#999', marginTop: '2vw', textAlign: 'center', maxWidth: '25vw', lineHeight: 1.6 }}>
-          Your coach will guide you through the ICF coaching arc: exploring what matters, gaining awareness, and designing your next step.
+          Your coach will ask one question at a time and wait for you to respond. Take your time to reflect before speaking.
         </p>
       )}
     </div>
