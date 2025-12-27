@@ -22,24 +22,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are an expert at summarizing ICF coaching sessions focused on the Drama Triangle and Compassion Triangle frameworks.
-
-Analyze the coaching conversation and provide:
-1. SESSION SUMMARY (2-3 sentences)
-2. KEY INSIGHTS (bullet points)
-3. DRAMA TRIANGLE PATTERNS observed
-4. COMPASSION SHIFT discussed
-5. COMMITTED ACTIONS with timeline and accountability
-
-Return valid JSON:
-{
-  "summary": "Brief summary",
-  "keyInsights": ["insight 1", "insight 2"],
-  "dramaPatterns": ["pattern"],
-  "compassionShift": "Description",
-  "actions": [{"action": "text", "timeline": "when", "accountability": "how"}],
-  "sessionTopic": "Short topic title"
-}`
+          content: `You are an expert at summarizing ICF coaching sessions focused on the Drama Triangle and Compassion Triangle frameworks. Analyze the coaching conversation and return valid JSON with: summary, keyInsights, dramaPatterns, compassionShift, actions (with action, timeline, accountability), and sessionTopic.`
         },
         {
           role: 'user',
@@ -73,20 +56,3 @@ Return valid JSON:
     return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 })
   }
 }
-```
-
----
-
-## Step 2: Your folder structure should now look like:
-```
-app/
-  api/
-    chat/
-    mentor/
-    transcribe/
-    voice/
-      session/
-        route.ts
-    session/          ← NEW
-      summary/        ← NEW
-        route.ts      ← NEW
