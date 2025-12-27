@@ -1,10 +1,33 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export default function DashboardPage() {
   const router = useRouter()
+  const [userName, setUserName] = useState<string>('Friend')
+  const [userInitial, setUserInitial] = useState<string>('F')
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Try to get name from user metadata (set during signup)
+        const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Friend'
+        setUserName(name)
+        setUserInitial(name.charAt(0).toUpperCase())
+      }
+    }
+    
+    getUser()
+  }, [])
 
   return (
     <div style={{
@@ -108,10 +131,10 @@ export default function DashboardPage() {
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <span style={{ color: '#ffffff', fontSize: '1vw', fontFamily: 'Georgia, serif' }}>F</span>
+              <span style={{ color: '#ffffff', fontSize: '1vw', fontFamily: 'Georgia, serif' }}>{userInitial}</span>
             </div>
             <div>
-              <p style={{ color: '#ffffff', fontSize: '0.9vw', margin: 0 }}>Friend</p>
+              <p style={{ color: '#ffffff', fontSize: '0.9vw', margin: 0 }}>{userName}</p>
               <span 
                 onClick={() => router.push('/settings')} 
                 style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8vw', cursor: 'pointer' }}
@@ -138,7 +161,7 @@ export default function DashboardPage() {
             fontFamily: 'Georgia, serif',
             margin: 0
           }}>
-            Welcome back, Friend
+            Welcome back, {userName}
           </h1>
           <p style={{ fontSize: '1vw', color: '#666666', margin: 0, marginTop: '0.5vw' }}>
             Continue your journey from drama to compassion
