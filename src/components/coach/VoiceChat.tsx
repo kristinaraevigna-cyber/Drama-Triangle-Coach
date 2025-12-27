@@ -288,7 +288,12 @@ export function VoiceChat() {
             instructions: getSystemPrompt(selectedLanguage),
             voice: 'alloy',
             input_audio_transcription: { model: 'whisper-1' },
-            turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 700 },
+            turn_detection: { 
+              type: 'server_vad', 
+              threshold: 0.7,              // Increased from 0.5 - requires louder speech to trigger
+              prefix_padding_ms: 500,      // Increased from 300 - more buffer before speech
+              silence_duration_ms: 1200,   // Increased from 700 - waits longer before responding
+            },
           },
         }))
         
@@ -400,6 +405,30 @@ export function VoiceChat() {
     if (audioElement.current) { audioElement.current.muted = isSpeakerOn; setIsSpeakerOn(!isSpeakerOn) }
   }
 
+  // Sound Bars Component
+  const SoundBars = ({ isActive, color }: { isActive: boolean; color: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3vw', height: '3vw' }}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          style={{
+            width: '0.4vw',
+            height: isActive ? '1.5vw' : '0.8vw',
+            backgroundColor: color,
+            borderRadius: '0.2vw',
+            animation: isActive ? `soundBar 0.5s ease-in-out infinite ${i * 0.1}s` : 'none',
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes soundBar {
+          0%, 100% { height: 0.8vw; }
+          50% { height: 2.5vw; }
+        }
+      `}</style>
+    </div>
+  )
+
   // Session Summary View
   if (showSummary && sessionSummary) {
     return (
@@ -465,8 +494,8 @@ export function VoiceChat() {
   if (isGeneratingSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#FAFAF8' }}>
-        <div style={{ width: '6vw', height: '6vw', borderRadius: '50%', backgroundColor: '#F0F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5vw' }}>
-          <span style={{ fontSize: '2vw' }}>⏳</span>
+        <div style={{ width: '8vw', height: '8vw', borderRadius: '50%', backgroundColor: '#F0F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5vw' }}>
+          <SoundBars isActive={true} color="#3D5A4C" />
         </div>
         <p style={{ fontSize: '1.2vw', color: '#3D5A4C', fontWeight: 500 }}>Generating session summary...</p>
         <p style={{ fontSize: '0.9vw', color: '#666' }}>Extracting insights and actions</p>
@@ -477,15 +506,23 @@ export function VoiceChat() {
   // Main Voice Chat View
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '3vw', backgroundColor: '#FAFAF8' }}>
-      {/* Visual Indicator */}
+      {/* Visual Indicator - Sound Bars */}
       <div style={{ position: 'relative', marginBottom: '2vw' }}>
         <div style={{
-          width: '12vw', height: '12vw', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '12vw', 
+          height: '12vw', 
+          borderRadius: '50%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
           backgroundColor: isConnected ? (isAISpeaking ? '#4B0082' : '#3D5A4C') : '#e8e8e8',
           boxShadow: isConnected ? (isAISpeaking ? '0 0 40px rgba(75,0,130,0.4)' : '0 0 30px rgba(61,90,76,0.3)') : 'none',
           transition: 'all 0.3s ease'
         }}>
-          <span style={{ fontSize: '3.5vw' }}>{isConnected ? (isAISpeaking ? '🗣️' : '👂') : '🎙️'}</span>
+          <SoundBars 
+            isActive={isConnected && isAISpeaking} 
+            color={isConnected ? 'rgba(255,255,255,0.9)' : '#999'} 
+          />
         </div>
       </div>
 
@@ -524,7 +561,7 @@ export function VoiceChat() {
               {isMuted ? '🔇' : '🎤'}
             </button>
             <button onClick={disconnectSession} style={{ padding: '0.8vw 1.5vw', borderRadius: '2vw', border: 'none', cursor: 'pointer', backgroundColor: '#A85454', color: '#fff', fontSize: '0.95vw', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5vw', boxShadow: '0 4px 15px rgba(168,84,84,0.3)', fontWeight: 500 }}>
-              📵 End Session
+              ⏹ End Session
             </button>
             <button onClick={toggleSpeaker} style={{ width: '3.5vw', height: '3.5vw', borderRadius: '50%', border: 'none', cursor: 'pointer', backgroundColor: !isSpeakerOn ? 'rgba(168,84,84,0.15)' : '#f0f0f0', fontSize: '1.3vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={isSpeakerOn ? 'Mute speaker' : 'Unmute speaker'}>
               {isSpeakerOn ? '🔊' : '🔈'}
@@ -532,7 +569,7 @@ export function VoiceChat() {
           </>
         ) : (
           <button onClick={connectSession} disabled={isConnecting} style={{ padding: '1vw 2.5vw', backgroundColor: isConnecting ? '#ccc' : '#3D5A4C', color: '#fff', border: 'none', borderRadius: '3vw', cursor: isConnecting ? 'not-allowed' : 'pointer', fontSize: '1vw', fontWeight: 500, boxShadow: isConnecting ? 'none' : '0 4px 20px rgba(61,90,76,0.3)' }}>
-            {isConnecting ? '⏳ Connecting...' : '📞 Start Coaching Session'}
+            {isConnecting ? 'Connecting...' : 'Start Coaching Session'}
           </button>
         )}
       </div>
