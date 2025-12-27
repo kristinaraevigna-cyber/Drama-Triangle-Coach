@@ -23,70 +23,52 @@ const LANGUAGES = [
 const getSystemPrompt = (languageCode: string) => {
   const languageName = LANGUAGES.find(l => l.code === languageCode)?.name || 'English'
   
-  return `You are a Compassion Coach, an ICF-certified professional coach following the 2025 ICF Core Competencies. You specialize in Dr. Stephen Karpman's Drama Triangle and Compassion Triangle frameworks. You are having a VOICE conversation.
+  return `You are a Compassion Coach. You are having a VOICE conversation. Respond in ${languageName}.
 
-## CRITICAL VOICE RULES - FOLLOW EXACTLY
+## CRITICAL RULES - FOLLOW EXACTLY
 
-1. **WAIT FOR THE CLIENT** - After you speak, STOP and wait. Do not continue talking. Let the client respond.
+1. **STOP AFTER EVERY RESPONSE** - After you speak, STOP COMPLETELY. Do not continue. Wait for the client.
 
-2. **ONE QUESTION ONLY** - Each response must contain exactly ONE question. Never ask multiple questions.
+2. **ONE QUESTION ONLY** - Each turn, you say ONE thing (a brief reflection or acknowledgment) and ask ONE question. Then STOP.
 
-3. **SHORT RESPONSES** - Keep responses to 2-3 sentences maximum. This is a conversation, not a lecture.
+3. **NEVER SPEAK TWICE** - If you just spoke, wait for the client. Do not fill silence.
 
-4. **NO LISTS** - Never use bullet points or numbered lists. Speak naturally.
+4. **2 SENTENCES MAX** - Keep responses very short.
 
-5. **RESPOND IN ${languageName}**
+CORRECT example:
+Coach: "That sounds challenging. What would help most right now?" [STOP]
+[Wait for client to speak]
 
-## RESPONSE PATTERN
+WRONG example:  
+Coach: "That sounds hard. What's been happening? How long has this been going on? What have you tried?" [TOO MANY QUESTIONS]
 
-Every response should follow this pattern:
-- Brief acknowledgment or reflection (1 sentence)
-- ONE powerful question (1 sentence)
-- Then STOP and WAIT
+## COACHING FLOW
 
-Example good response: "It sounds like this situation with your colleague has been weighing on you. What would you most like to be different?"
+Turn 1 (greeting): "Hello, I'm your Compassion Coach. What would you like to focus on today?" [STOP]
 
-Example bad response: "I hear you. That must be difficult. What's been happening? How long has this been going on? What have you tried so far?" (TOO MANY QUESTIONS)
+Turn 2 (after they share): Reflect briefly + ask "Why is this important to you right now?" [STOP]
 
-## ICF COACHING ARC
+Turn 3 (after they answer): Reflect + ask "What would you like to be different?" [STOP]
 
-### 1. OPENING (First exchange)
-After greeting, ask ONE question: "What would you like to focus on today?"
-Then WAIT for their answer.
-
-### 2. CLARIFYING (Next 1-2 exchanges)  
-Ask ONE of these (not all):
-- "Why is this important to you right now?"
-- "What would you like to walk away with from our conversation?"
-
-### 3. EXPLORATION (Middle of conversation)
-Use ONE powerful question per response:
+Then continue with ONE question per turn:
 - "Tell me more about that."
-- "What are you noticing as you share this?"
-- "What's the impact of this on you?"
+- "What are you noticing?"
 - "What patterns do you see?"
-
-### 4. ACTION (Toward the end)
-Ask ONE action question:
+- "What options do you have?"
 - "What's one small step you could take?"
-- "When will you do this?"
 
-## DRAMA TRIANGLE AWARENESS
+## DRAMA TRIANGLE
 
-When you notice patterns, gently name them with ONE question:
+If you notice Victim/Persecutor/Rescuer patterns, gently ask:
+- Victim: "What IS within your control here?"
+- Persecutor: "What do you need?"
+- Rescuer: "How can you support without taking over?"
 
-VICTIM patterns → "What part of this IS within your control?"
-PERSECUTOR patterns → "What do YOU need here?"
-RESCUER patterns → "What would it look like to support without taking over?"
-
-## WHAT NOT TO DO
-- Never ask multiple questions in one response
-- Never keep talking after asking a question
-- Never give advice or tell them what to do
-- Never lecture or explain concepts
-- Never fill silence - let them think
-
-Remember: Ask ONE question, then STOP and WAIT for the client to speak.`
+## RULES
+- Never give advice
+- Never lecture
+- Never ask multiple questions
+- Always STOP after speaking and WAIT`
 }
 
 interface Message {
@@ -103,7 +85,6 @@ interface SessionSummary {
   sessionTopic: string
 }
 
-// CSS for animations - injected once
 const injectStyles = () => {
   if (typeof document !== 'undefined' && !document.getElementById('voice-chat-styles')) {
     const style = document.createElement('style')
@@ -155,14 +136,14 @@ export function VoiceChat() {
   const getGreeting = (lang: string): string => {
     const greetings: Record<string, string> = {
       en: "Hello, I'm your Compassion Coach. What would you like to focus on today?",
-      es: "Hola, soy tu Coach de Compasión. ¿En qué te gustaría enfocarte hoy?",
-      fr: "Bonjour, je suis votre Coach. Sur quoi aimeriez-vous vous concentrer aujourd'hui?",
+      es: "Hola, soy tu Coach. ¿En qué te gustaría enfocarte hoy?",
+      fr: "Bonjour, je suis votre Coach. Sur quoi aimeriez-vous travailler aujourd'hui?",
       de: "Hallo, ich bin Ihr Coach. Worauf möchten Sie sich heute konzentrieren?",
       it: "Ciao, sono il tuo Coach. Su cosa vorresti concentrarti oggi?",
-      pt: "Olá, sou seu Coach. No que você gostaria de se concentrar hoje?",
-      ja: "こんにちは、コーチです。今日は何に焦点を当てたいですか？",
-      ko: "안녕하세요, 코치입니다. 오늘 무엇에 집중하고 싶으신가요?",
-      zh: "你好，我是你的教练。今天你想关注什么？",
+      pt: "Olá, sou seu Coach. No que você gostaria de focar hoje?",
+      ja: "こんにちは、コーチです。今日は何について話したいですか？",
+      ko: "안녕하세요, 코치입니다. 오늘 무엇에 대해 이야기하고 싶으신가요?",
+      zh: "你好，我是你的教练。今天你想谈什么？",
     }
     return greetings[lang] || greetings.en
   }
@@ -249,20 +230,27 @@ export function VoiceChat() {
               type: 'server_vad', 
               threshold: 0.8,
               prefix_padding_ms: 500,
-              silence_duration_ms: 1500,
+              silence_duration_ms: 2000,
             },
           },
         }))
         
-        // Only send greeting after a delay, then STOP
         setTimeout(() => {
           const greeting = getGreeting(selectedLanguage)
           messagesRef.current.push({ role: 'assistant', content: greeting })
           dataChannel.current?.send(JSON.stringify({
+            type: 'conversation.item.create',
+            item: {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'text', text: greeting }]
+            }
+          }))
+          dataChannel.current?.send(JSON.stringify({
             type: 'response.create',
             response: { 
-              modalities: ['text', 'audio'], 
-              instructions: `Say exactly this greeting, then STOP and wait for the client to speak: "${greeting}"` 
+              modalities: ['audio'],
+              instructions: 'Say the greeting exactly as provided, then stop completely. Do not say anything else. Do not ask follow-up questions. Wait for the user to speak first.'
             },
           }))
         }, 1000)
@@ -321,7 +309,7 @@ export function VoiceChat() {
         setSessionSummary(summaryData)
         setShowSummary(true)
 
-        if (user && summaryData.actions?.length > 0) {
+        if (user && summaryData.actions && summaryData.actions.length > 0) {
           for (const action of summaryData.actions) {
             await supabase.from('actions').insert({
               user_id: user.id,
@@ -366,7 +354,6 @@ export function VoiceChat() {
     if (audioElement.current) { audioElement.current.muted = isSpeakerOn; setIsSpeakerOn(!isSpeakerOn) }
   }
 
-  // Sound Bars Component
   const SoundBars = ({ isActive, color }: { isActive: boolean; color: string }) => {
     const bars = [
       { animation: 'soundBar1 0.5s ease-in-out infinite', delay: '0s' },
@@ -395,7 +382,6 @@ export function VoiceChat() {
     )
   }
 
-  // Session Summary View
   if (showSummary && sessionSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '2vw', backgroundColor: '#FAFAF8', overflowY: 'auto' }}>
@@ -403,7 +389,7 @@ export function VoiceChat() {
         
         <div style={{ backgroundColor: '#fff', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw', border: '1px solid #e8e8e8' }}>
           <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '0.5vw', fontWeight: 500 }}>Summary</h3>
-          <p style={{ fontSize: '0.95vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{sessionSummary.summary}</p>
+          <p style={{ fontSize: '0.95vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.summary || '')}</p>
         </div>
 
         {sessionSummary.keyInsights && sessionSummary.keyInsights.length > 0 && (
@@ -437,7 +423,7 @@ export function VoiceChat() {
             {sessionSummary.actions.map((action, i) => (
               <div key={i} style={{ padding: '1vw', backgroundColor: '#F0F7F4', borderRadius: '0.5vw', marginBottom: '0.5vw' }}>
                 <p style={{ fontSize: '0.95vw', color: '#1a1a1a', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>{String(action.action)}</p>
-                <p style={{ fontSize: '0.8vw', color: '#666', margin: '0.3vw 0 0 0' }}>Timeline: {String(action.timeline)} | Accountability: {String(action.accountability)}</p>
+                <p style={{ fontSize: '0.8vw', color: '#666', margin: '0.3vw 0 0 0' }}>Timeline: {String(action.timeline || 'Not specified')} | Accountability: {String(action.accountability || 'Self')}</p>
               </div>
             ))}
             <p style={{ fontSize: '0.8vw', color: '#3D5A4C', margin: '1vw 0 0 0', fontStyle: 'italic' }}>Actions saved to your Actions page</p>
@@ -456,7 +442,6 @@ export function VoiceChat() {
     )
   }
 
-  // Generating Summary View
   if (isGeneratingSummary) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#FAFAF8' }}>
@@ -469,10 +454,8 @@ export function VoiceChat() {
     )
   }
 
-  // Main Voice Chat View
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '3vw', backgroundColor: '#FAFAF8' }}>
-      {/* Visual Indicator - Sound Bars */}
       <div style={{ position: 'relative', marginBottom: '2vw' }}>
         <div style={{
           width: '12vw', 
@@ -492,7 +475,6 @@ export function VoiceChat() {
         </div>
       </div>
 
-      {/* Status */}
       <p style={{ fontSize: '1.2vw', color: isConnected ? '#3D5A4C' : '#666', marginBottom: '0.5vw', fontWeight: 500 }}>{status}</p>
       
       {isConnected && (
@@ -501,7 +483,6 @@ export function VoiceChat() {
         </p>
       )}
 
-      {/* Language Selector (when not connected) */}
       {!isConnected && (
         <div style={{ position: 'relative', marginBottom: '1.5vw' }}>
           <button onClick={() => setShowLanguages(!showLanguages)} style={{ display: 'flex', alignItems: 'center', gap: '0.6vw', padding: '0.6vw 1.2vw', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '0.5vw', cursor: 'pointer', fontSize: '0.9vw' }}>
@@ -519,7 +500,6 @@ export function VoiceChat() {
         </div>
       )}
 
-      {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1vw' }}>
         {isConnected ? (
           <>
@@ -540,7 +520,6 @@ export function VoiceChat() {
         )}
       </div>
 
-      {/* Instructions (when not connected) */}
       {!isConnected && (
         <p style={{ fontSize: '0.85vw', color: '#999', marginTop: '2vw', textAlign: 'center', maxWidth: '25vw', lineHeight: 1.6 }}>
           Your coach will ask one question at a time and wait for you to respond. Take your time to reflect before speaking.
