@@ -314,7 +314,7 @@ export function VoiceChat() {
           dataChannel.current?.send(JSON.stringify({
             type: 'response.create',
             response: { 
-              modalities: ['audio'],
+              modalities: ['audio', 'text'],
               instructions: 'Say the greeting exactly as provided, then stop completely. Do not say anything else. Do not ask follow-up questions. Wait for the user to speak first.'
             },
           }))
@@ -435,57 +435,57 @@ export function VoiceChat() {
 
   if (showSummary && sessionSummary) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '2vw', backgroundColor: '#FAFAF8', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '1.5vw', fontWeight: 500, color: '#1a1a1a', marginBottom: '1vw', fontFamily: 'Georgia, serif' }}>Session Complete</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '32px', backgroundColor: '#FAFAF8', overflowY: 'auto' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 500, color: '#1a1a1a', marginBottom: '16px', fontFamily: 'Georgia, serif' }}>Session Complete</h2>
         
-        <div style={{ backgroundColor: '#fff', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw', border: '1px solid #e8e8e8' }}>
-          <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '0.5vw', fontWeight: 500 }}>Summary</h3>
-          <p style={{ fontSize: '0.95vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.summary || '')}</p>
+        <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '16px', border: '1px solid #e8e8e8' }}>
+          <h3 style={{ fontSize: '16px', color: '#3D5A4C', marginBottom: '8px', fontWeight: 500 }}>Summary</h3>
+          <p style={{ fontSize: '15px', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.summary || '')}</p>
         </div>
 
         {sessionSummary.keyInsights && sessionSummary.keyInsights.length > 0 && (
-          <div style={{ backgroundColor: '#F0F7F4', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
-            <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '0.8vw', fontWeight: 500 }}>Key Insights</h3>
+          <div style={{ backgroundColor: '#F0F7F4', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '16px', color: '#3D5A4C', marginBottom: '12px', fontWeight: 500 }}>Key Insights</h3>
             {sessionSummary.keyInsights.map((insight, i) => (
-              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', paddingLeft: '1vw', borderLeft: '2px solid #3D5A4C', lineHeight: 1.5 }}>{String(insight)}</p>
+              <p key={i} style={{ fontSize: '14px', color: '#333', margin: '0 0 8px 0', paddingLeft: '16px', borderLeft: '2px solid #3D5A4C', lineHeight: 1.5 }}>{String(insight)}</p>
             ))}
           </div>
         )}
 
         {sessionSummary.dramaPatterns && sessionSummary.dramaPatterns.length > 0 && (
-          <div style={{ backgroundColor: '#FFF8F0', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
-            <h3 style={{ fontSize: '1vw', color: '#8B4513', marginBottom: '0.8vw', fontWeight: 500 }}>Drama Triangle Patterns Noticed</h3>
+          <div style={{ backgroundColor: '#FFF8F0', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '16px', color: '#8B4513', marginBottom: '12px', fontWeight: 500 }}>Drama Triangle Patterns Noticed</h3>
             {sessionSummary.dramaPatterns.map((pattern, i) => (
-              <p key={i} style={{ fontSize: '0.9vw', color: '#333', margin: '0 0 0.5vw 0', lineHeight: 1.5 }}>{String(pattern)}</p>
+              <p key={i} style={{ fontSize: '14px', color: '#333', margin: '0 0 8px 0', lineHeight: 1.5 }}>{String(pattern)}</p>
             ))}
           </div>
         )}
 
         {sessionSummary.compassionShift && (
-          <div style={{ backgroundColor: '#F5F5FF', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw' }}>
-            <h3 style={{ fontSize: '1vw', color: '#4B0082', marginBottom: '0.5vw', fontWeight: 500 }}>Movement Toward Compassion</h3>
-            <p style={{ fontSize: '0.9vw', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.compassionShift)}</p>
+          <div style={{ backgroundColor: '#F5F5FF', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '16px', color: '#4B0082', marginBottom: '8px', fontWeight: 500 }}>Movement Toward Compassion</h3>
+            <p style={{ fontSize: '14px', color: '#333', margin: 0, lineHeight: 1.6 }}>{String(sessionSummary.compassionShift)}</p>
           </div>
         )}
 
         {sessionSummary.actions && sessionSummary.actions.length > 0 && (
-          <div style={{ backgroundColor: '#fff', borderRadius: '0.8vw', padding: '1.5vw', marginBottom: '1vw', border: '2px solid #3D5A4C' }}>
-            <h3 style={{ fontSize: '1vw', color: '#3D5A4C', marginBottom: '1vw', fontWeight: 500 }}>Committed Actions</h3>
+          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '16px', border: '2px solid #3D5A4C' }}>
+            <h3 style={{ fontSize: '16px', color: '#3D5A4C', marginBottom: '16px', fontWeight: 500 }}>Committed Actions</h3>
             {sessionSummary.actions.map((action, i) => (
-              <div key={i} style={{ padding: '1vw', backgroundColor: '#F0F7F4', borderRadius: '0.5vw', marginBottom: '0.5vw' }}>
-                <p style={{ fontSize: '0.95vw', color: '#1a1a1a', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>{String(action.action)}</p>
-                <p style={{ fontSize: '0.8vw', color: '#666', margin: '0.3vw 0 0 0' }}>Timeline: {String(action.timeline || 'Not specified')} | Accountability: {String(action.accountability || 'Self')}</p>
+              <div key={i} style={{ padding: '16px', backgroundColor: '#F0F7F4', borderRadius: '8px', marginBottom: '8px' }}>
+                <p style={{ fontSize: '15px', color: '#1a1a1a', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>{String(action.action)}</p>
+                <p style={{ fontSize: '13px', color: '#666', margin: '4px 0 0 0' }}>Timeline: {String(action.timeline || 'Not specified')} | Accountability: {String(action.accountability || 'Self')}</p>
               </div>
             ))}
-            <p style={{ fontSize: '0.8vw', color: '#3D5A4C', margin: '1vw 0 0 0', fontStyle: 'italic' }}>Actions saved to your Actions page</p>
+            <p style={{ fontSize: '13px', color: '#3D5A4C', margin: '16px 0 0 0', fontStyle: 'italic' }}>Actions saved to your Actions page</p>
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '1vw', marginTop: '1vw' }}>
-          <button onClick={() => { setShowSummary(false); setSessionSummary(null); setStatus('Ready to connect') }} style={{ flex: 1, padding: '1vw', backgroundColor: '#3D5A4C', color: '#fff', border: 'none', borderRadius: '0.5vw', cursor: 'pointer', fontSize: '0.95vw', fontWeight: 500 }}>
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+          <button onClick={() => { setShowSummary(false); setSessionSummary(null); setStatus('Ready to connect') }} style={{ flex: 1, padding: '16px', backgroundColor: '#3D5A4C', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: 500 }}>
             Start New Session
           </button>
-          <button onClick={() => window.location.href = '/actions'} style={{ flex: 1, padding: '1vw', backgroundColor: '#fff', color: '#3D5A4C', border: '1px solid #3D5A4C', borderRadius: '0.5vw', cursor: 'pointer', fontSize: '0.95vw', fontWeight: 500 }}>
+          <button onClick={() => window.location.href = '/actions'} style={{ flex: 1, padding: '16px', backgroundColor: '#fff', color: '#3D5A4C', border: '1px solid #3D5A4C', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: 500 }}>
             View All Actions
           </button>
         </div>
@@ -499,8 +499,8 @@ export function VoiceChat() {
         <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: '#3D5A4C', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
           <SoundBars isActive={true} color="rgba(255,255,255,0.9)" />
         </div>
-        <p style={{ fontSize: '1.2vw', color: '#3D5A4C', fontWeight: 500 }}>Generating session summary...</p>
-        <p style={{ fontSize: '0.9vw', color: '#666' }}>Extracting insights and actions</p>
+        <p style={{ fontSize: '20px', color: '#3D5A4C', fontWeight: 500 }}>Generating session summary...</p>
+        <p style={{ fontSize: '14px', color: '#666' }}>Extracting insights and actions</p>
       </div>
     )
   }
